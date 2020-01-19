@@ -2,7 +2,6 @@
 #define __COMMANDHANDLER__
 #include <map>
 #include <tuple>
-#include <regex>
 #include <functional>
 #include <string_view>
 #include <stdexcept>
@@ -10,14 +9,14 @@
 class CommandHandler
 {
 public:
-	using Callback = std::function<void(const std::cmatch&)>;
-	using CallbackSlot = std::tuple<std::regex, Callback>;
+	using Callback = std::function<void(std::string_view)>;
+	using CallbackSlot = std::tuple<Callback>;
 
-	void addHandler(std::string_view command, std::string_view argumentRegex, Callback callback);
+	void addHandler(std::string_view command, Callback callback);
 	void callHandler(std::string_view command, std::string_view arguments);
 
 private:
-	std::unordered_map<std::string, CallbackSlot> mHandlers;
+	std::unordered_map<std::string, Callback> mHandlers;
 };
 
 using CommandHandlerException = std::runtime_error;
