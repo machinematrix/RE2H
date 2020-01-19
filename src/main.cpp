@@ -140,6 +140,28 @@ void setItemAt(Inventory &inv, std::string_view args)
 		cout << "Usage: set [slot] (itemId:[id] | weaponId:[id]) upgrades:[val] ammoType:[id] ammo:[value]\nAll arguments except slot are optional, but they must appear in the order shown above" << endl;
 }
 
+void setTime(Stats &stats, std::string_view args)
+{
+	static std::regex rgx("[ ]?([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2})");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+		stats.setPlayedTime(std::stoul(match[1]), std::stoul(match[2]), std::stoul(match[3]));
+	else
+		cout << "Usage: setTime [hh:mm:ss]" << endl;
+}
+
+void setSaveCounter(Stats &stats, std::string_view args)
+{
+	static std::regex rgx("[ ]?([[:digit:]]+)");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+		stats.setSaveCount(std::stoul(match[1]));
+	else
+		cout << "Usage: setSaveCounter [count]" << endl;
+}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -148,18 +170,16 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 	std::string command, args;
 	CommandHandler handler;
 	Inventory inv;
+	Stats stats;
 	HWND consoleWindow;
 
-	try {
-		handler.addHandler("ItemName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(itemName, inv, std::placeholders::_1));
-		handler.addHandler("WeaponName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(weaponName, inv, std::placeholders::_1));
-		handler.addHandler("get", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(getItemAt, inv, std::placeholders::_1));
-		handler.addHandler("set", /*"[ ]?([[:digit:]]+) (?:itemId:([[:digit:]]+)*)?[ ]?(?:weaponId:([[:digit:]]+)*)?[ ]?(?:upgrades:([[:digit:]]+)*)?[ ]?(?:ammoType:([[:digit:]]+)*)?[ ]?(?:ammo:([[:digit:]]+)*)?",*/ std::bind(setItemAt, inv, std::placeholders::_1));
-		handler.addHandler("clear", /*"",*/ clear);
-	}
-	catch (const CommandHandlerException &e) {
-		cout << e.what() << endl;
-	}
+	handler.addHandler("ItemName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(itemName, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("WeaponName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(weaponName, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("get", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("set", /*"[ ]?([[:digit:]]+) (?:itemId:([[:digit:]]+)*)?[ ]?(?:weaponId:([[:digit:]]+)*)?[ ]?(?:upgrades:([[:digit:]]+)*)?[ ]?(?:ammoType:([[:digit:]]+)*)?[ ]?(?:ammo:([[:digit:]]+)*)?",*/ std::bind(setItemAt, inv, std::placeholders::_1));
+	handler.addHandler("clear", /*"",*/ clear);
+	handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
+	handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
 
 	cout << "READY" << endl;
 
@@ -170,7 +190,7 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		try {
 			handler.callHandler(command, args);
 		}
-		catch (const CommandHandlerException &e) {
+		catch (const CommandHandlerException & e) {
 			cout << e.what() << endl;
 		}
 	}
