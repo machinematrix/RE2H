@@ -9,8 +9,8 @@
 #include <iostream>
 #include <iomanip>
 
-namespace {
-
+namespace
+{
 	std::string formatPattern(std::string str)
 	{
 		str.erase(remove(str.begin(), str.end(), 32), str.end());
@@ -80,6 +80,12 @@ namespace {
 
 		throw std::runtime_error("Process not found");
 	}
+}
+
+ModuleInfo getModuleInfo(std::wstring_view moduleName)
+{
+	auto entry = getModuleEntry(moduleName);
+	return { entry.modBaseAddr, entry.modBaseSize };
 }
 
 Pointer patternScanHeap(std::string_view unformattedPattern)

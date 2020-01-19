@@ -5,6 +5,13 @@
 
 using Pointer = char*;
 
+struct ModuleInfo
+{
+	void *moduleBase;
+	std::uint32_t moduleSize;
+};
+
+ModuleInfo getModuleInfo(std::wstring_view moduleName);
 Pointer patternScanHeap(std::string_view unformattedPattern);
 Pointer patternScan(std::string_view unformattedPattern);
 Pointer patternScan(std::string_view unformattedPattern, std::wstring_view moduleName);
@@ -32,14 +39,18 @@ void setValue(Pointer address, const T(&value)[sz])
 template<typename T>
 Pointer pointerPath(Pointer baseAddress, const T &offset)
 {
-	memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
+	//memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
+	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
+	baseAddress += offset;
 	return baseAddress;
 }
 
 template<typename T, typename ...Args>
 Pointer pointerPath(Pointer baseAddress, const T &offset, const Args& ...offsets)
 {
-	memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
+	//memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
+	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
+	baseAddress += offset;
 	return pointerPath(baseAddress, offsets...);
 }
 
