@@ -14,16 +14,14 @@ public:
 	Inventory();
 	std::wstring_view getWeaponName(WeaponId id);
 	std::wstring_view getItemName(ItemId id);
-	void* getInventoryAddress();
 	ItemData* getItemAt(int slot);
 
 private:
 	struct TextHash;
 	struct GameInventory;
-	GameInventory* getInventoryPointer();
 
 	Pointer mExecutableBaseAddress;
-	Pointer mInventoryBase;
+	//Pointer mInventoryBase;
 	Pointer mBB0Base;
 	Pointer mGetNameFirstParameter;
 	std::int64_t (*getWeaponTextHash)(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
@@ -43,7 +41,7 @@ private:
 	std::uint64_t unknownInt1;
 	void *derivedPtr;
 	void *unknownPtr2;
-	void *unknownPtr3;
+	void *unknownPtr3; //changes in SLS60 when changing ammo type
 public:
 	std::uint64_t slotIndex; //zero-based left-to-right index of this item in inventory
 private:
@@ -231,4 +229,22 @@ enum class Inventory::ItemId
 	StuffedDoll
 };
 
+class Stats
+{
+	struct Microseconds;
+	struct Timer;
+	using Pointer = char*;
+public:
+	Stats();
+	void setGeneralTimer(unsigned microseconds, unsigned overflows);
+	void setInventoryTimer(unsigned microseconds, unsigned overflows);
+	void setPauseTimer(unsigned microseconds, unsigned overflows);
+	void setPlayedTime(unsigned hours, unsigned minutes, unsigned seconds);
+	void setSaveCount(unsigned count);
+private:
+	Timer* getTimer();
+
+	Pointer mTimerBase;
+	Pointer mSaveCounterBase;
+};
 #endif

@@ -29,11 +29,6 @@ namespace
 	{
 		return pointerPath(bb0Base, 0x130, 0);
 	}
-
-	Pointer getPointerFromImmediate(Pointer codeAddress)
-	{
-		return codeAddress + static_cast<std::int64_t>(getValue<std::int32_t>(codeAddress)) + 4;
-	}
 }
 
 struct Inventory::GameInventory
@@ -49,7 +44,7 @@ struct Inventory::TextHash
 };
 
 Inventory::Inventory()
-	:mInventoryBase(patternScan("48 8B 15 ????????  45 33 C0  E8 ????????  0FB6 ??  48 8B 43 50  4C 39 70 18", processName)),
+	://mInventoryBase(patternScan("48 8B 15 ????????  45 33 C0  E8 ????????  0FB6 ??  48 8B 43 50  4C 39 70 18", processName)),
 	mExecutableBaseAddress(static_cast<Pointer>(getModuleInfo(processName).moduleBase)),
 	getWeaponTextHash(nullptr),
 	getItemTextHash(reinterpret_cast<decltype(getItemTextHash)>(patternScan("48 89 5C 24 10  48 89 74 24 18  48 89 7C 24 20  55  41 56  41 57  48 8B EC  48 83 EC 60  44 0FB7 15 ????????", processName))),
@@ -69,7 +64,7 @@ Inventory::Inventory()
 
 	getArgumentForGetItemAt = reinterpret_cast<decltype(getArgumentForGetItemAt)>(getPointerFromImmediate(getArgumentForGetItemAtPtr + 1));
 
-	mInventoryBase = getPointerFromImmediate(mInventoryBase + 3);
+	//mInventoryBase = getPointerFromImmediate(mInventoryBase + 3);
 	mBB0Base = getPointerFromImmediate(mBB0Base + 3);
 	getWeaponTextHash = (reinterpret_cast<decltype(getWeaponTextHash)>(getPointerFromImmediate(getWeaponTextHashPtr + 1)));
 	getName = (reinterpret_cast<decltype(getName)>(getPointerFromImmediate(getNamePtr + 1)));
@@ -79,10 +74,10 @@ Inventory::Inventory()
 
 	#ifndef NDEBUG
 	cout << (void*)mExecutableBaseAddress << " -> mExecutableBaseAddress" << endl;
-	cout << (void*)mInventoryBase << " -> mInventoryBase" << endl;
+	//cout << (void*)mInventoryBase << " -> mInventoryBase" << endl;
 	cout << (void*)mGetNameFirstParameter << " -> mGetNameFirstParameter" << endl;
-	cout << (void*)getF0c0(mExecutableBaseAddress) << " -> F0C0 Base" << endl;
-	cout << (void*)getB10(mBB0Base) << " -> BB0 Base" << endl;
+	cout << (void*)mExecutableBaseAddress << " -> F0C0 Base" << endl;
+	cout << (void*)mBB0Base << " -> BB0 Base" << endl;
 	cout << getWeaponTextHash << " -> getWeaponTextHash entry point" << endl;
 	cout << getName << " -> getName entry point" << endl;
 	#endif
@@ -110,18 +105,17 @@ std::wstring_view Inventory::getItemName(ItemId id)
 	return result;
 }
 
-void* Inventory::getInventoryAddress()
-{
-	return getInventoryPointer();
-}
-
 Inventory::ItemData* Inventory::getItemAt(int slot)
 {
+	ItemData *result = nullptr;
 	auto f0c0 = getF0c0(mExecutableBaseAddress);
 	auto arg = getArgument(f0c0, getValue<Pointer>(mUnnamedArgumentPointer) + 0x50);
-	auto argForGetItemAt = getArgumentForGetItemAt(f0c0, arg);
+	if (arg) {
+		auto argForGetItemAt = getArgumentForGetItemAt(f0c0, arg);
+		result = getItemAtSlot(f0c0, getValue<void*>((Pointer)argForGetItemAt + 0xA8), slot);
+	}
 
-	return getItemAtSlot(f0c0, getValue<void*>((Pointer)argForGetItemAt + 0xA8), slot);
+	return result;
 	/*ItemData *result = nullptr;
 	
 	if (auto inv = getInventoryPointer())
@@ -138,32 +132,114 @@ Inventory::ItemData* Inventory::getItemAt(int slot)
 	return result;*/
 }
 
-Inventory::GameInventory* Inventory::getInventoryPointer()
+//Inventory::GameInventory* Inventory::getInventoryPointer()
+//{
+//	/*Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0x88);
+//	if (invClaire) {
+//		if (!(getValue<std::uint64_t>(invClaire) & 0x00FF000000000000))
+//			return reinterpret_cast<GameInventory*>(pointerPath(invClaire, 0x50, 0x10));
+//		else
+//			return nullptr;
+//	}
+//	else
+//		return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));*/
+//	Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0xC8);
+//	if (getValue<Pointer>(invClaire))
+//	{
+//		invClaire = pointerPath(invClaire, 0x10, 0x110, 0x10);
+//		if ((reinterpret_cast<std::int64_t>(invClaire) & 0x0000FFF000000000) != 0x00007FF000000000)
+//		{
+//			return reinterpret_cast<GameInventory*>(invClaire);
+//		}
+//		else
+//			return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));
+//	}
+//	else
+//		return nullptr;
+//}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+struct Stats::Microseconds //microseconds = overflows * 0xFFFFFFFF + microseconds
 {
-	/*Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0x88);
-	if (invClaire) {
-		if (!(getValue<std::uint64_t>(invClaire) & 0x00FF000000000000))
-			return reinterpret_cast<GameInventory*>(pointerPath(invClaire, 0x50, 0x10));
-		else
-			return nullptr;
-	}
-	else
-		return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));*/
-	Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0xC8);
-	if (getValue<Pointer>(invClaire))
-	{
-		invClaire = pointerPath(invClaire, 0x10, 0x110, 0x10);
-		if ((reinterpret_cast<std::int64_t>(invClaire) & 0x0000FFF000000000) != 0x00007FF000000000)
-		{
-			return reinterpret_cast<GameInventory*>(invClaire);
-		}
-		else
-			return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));
-	}
-	else
-		return nullptr;
+	std::uint32_t microseconds;
+	std::uint32_t overflows;
+};
+
+struct Stats::Timer //Game time = mGeneralTimer - mUnknownFrozenTimer - mPauseTimer1
+{
+	char padding[0x18 /*24*/];
+	Microseconds mGeneralTimer1; //runs all the time
+	Microseconds mUnknownFrozenTimer1; //char padding2[0x8 /*8*/];
+	Microseconds mInventoryTimer1; //runs when in inventory/map/etc
+	Microseconds mPauseTimer1; //runs when paused
+	char padding3[0x20 /*32*/];
+	Microseconds mGeneralTimer2; //runs all the time
+	Microseconds mUnknownFrozenTimer2; //char padding4[0x8 /*8*/];
+	Microseconds mInventoryTimer2; //runs when in inventory/map/etc
+	Microseconds mPauseTimer2; //runs when paused
+};
+
+Stats::Stats()
+	:mTimerBase(patternScan("48 8B 05  ????????  48 85 C9  75 ??  48 85 C0  74 ??  88 48 53", processName)),
+	mSaveCounterBase(patternScan("48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 81 ????????  48 85 C0 75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B 0D ????????  44 8B C6", processName))
+{
+	mTimerBase = getPointerFromImmediate(mTimerBase + 3);
+	mSaveCounterBase = getPointerFromImmediate(mSaveCounterBase + 3);
+
+	#ifndef NDEBUG
+	cout << (void*)mTimerBase << " timer base" << endl;
+	cout << (void*)mSaveCounterBase << " save counter base" << endl;
+	#endif
 }
 
-//0x00007FF7087B0570
-//0x0000FFF000000000
-//0x00FF000000000000
+void Stats::setGeneralTimer(unsigned microseconds, unsigned overflows)
+{
+	auto timer = getTimer();
+	timer->mGeneralTimer1.microseconds = timer->mGeneralTimer2.microseconds = microseconds;
+	timer->mGeneralTimer1.overflows = timer->mGeneralTimer2.overflows = overflows;
+}
+
+void Stats::setInventoryTimer(unsigned microseconds, unsigned overflows)
+{
+	auto timer = getTimer();
+	timer->mInventoryTimer1.microseconds = timer->mInventoryTimer2.microseconds = microseconds;
+	timer->mInventoryTimer1.overflows = timer->mInventoryTimer2.overflows = overflows;
+}
+
+void Stats::setPauseTimer(unsigned microseconds, unsigned overflows)
+{
+	auto timer = getTimer();
+	timer->mPauseTimer1.microseconds = timer->mPauseTimer2.microseconds = microseconds;
+	timer->mPauseTimer1.overflows = timer->mPauseTimer2.overflows = overflows;
+}
+
+void Stats::setPlayedTime(unsigned hours, unsigned minutes, unsigned seconds)
+{
+	auto timer = getTimer();
+	std::uint64_t microseconds = 0;
+	timer->mUnknownFrozenTimer1 = timer->mUnknownFrozenTimer2 = { 0, 0 };
+	timer->mPauseTimer1 = timer->mPauseTimer2 = { 0, 0 };
+
+	microseconds += 1000000ull * seconds;
+	microseconds += 1000000ull * minutes * 60;
+	microseconds += 1000000ull * hours * 60 * 60;
+
+	timer->mGeneralTimer1.overflows = timer->mGeneralTimer2.overflows = microseconds / 0xFFFFFFFFull;
+	timer->mGeneralTimer1.microseconds = timer->mGeneralTimer2.microseconds = microseconds % 0xFFFFFFFFull;
+}
+
+void Stats::setSaveCount(unsigned count)
+{
+	*reinterpret_cast<std::uint32_t*>(pointerPath(mSaveCounterBase, 0x198, 0x24)) = count;
+}
+
+Stats::Timer* Stats::getTimer()
+{
+	return reinterpret_cast<Timer*>(pointerPath(mTimerBase, 0x60, 0));
+}
