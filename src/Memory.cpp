@@ -195,3 +195,8 @@ Pointer pointerPath(Pointer baseAddress, const std::vector<std::uint64_t> &offse
 	}
 	return baseAddress;
 }
+
+Pointer getPointerFromImmediate(Pointer codeAddress)
+{
+	return codeAddress + static_cast<std::int64_t>(getValue<std::int32_t>(codeAddress)) + 4;
+}

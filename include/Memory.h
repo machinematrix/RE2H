@@ -39,7 +39,6 @@ void setValue(Pointer address, const T(&value)[sz])
 template<typename T>
 Pointer pointerPath(Pointer baseAddress, const T &offset)
 {
-	//memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
 	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
 	baseAddress += offset;
 	return baseAddress;
@@ -48,12 +47,12 @@ Pointer pointerPath(Pointer baseAddress, const T &offset)
 template<typename T, typename ...Args>
 Pointer pointerPath(Pointer baseAddress, const T &offset, const Args& ...offsets)
 {
-	//memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
 	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
 	baseAddress += offset;
 	return pointerPath(baseAddress, offsets...);
 }
 
 Pointer pointerPath(Pointer baseAddress, const std::vector<std::uint64_t> &offsets);
+Pointer getPointerFromImmediate(Pointer codeAddress);
 
 #endif
