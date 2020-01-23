@@ -20,6 +20,11 @@ DWORD WINAPI ConsoleMain(LPVOID);
 DWORD WINAPI Win32Main(LPVOID);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
+namespace
+{
+	std::regex singleDigitRegex("[ ]?([[:digit:]]+)");
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
 {
 	switch (ul_reason_for_call)
@@ -42,26 +47,45 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 
 void itemName(Inventory &inv, std::string_view args)
 {
-	static std::regex rgx("[ ]?([[:digit:]]+)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, rgx)) {
-		wcout << inv.getItemName(static_cast<Inventory::ItemId>(std::stoi(match[1]))) << endl;
+	if (std::regex_match(args.data(), match, singleDigitRegex))
+	{
+		if (match[1] != '*')
+			wcout << inv.getItemName(static_cast<Inventory::ItemId>(std::stoi(match[1]))) << endl;
+		else
+		{
+			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::ItemId::StuffedDoll); ++i) {
+				auto name = inv.getItemName(static_cast<Inventory::ItemId>(i));
+				if (!name.empty())
+					wcout << name << ": " << i << endl;
+			}
+		}
 	}
 	else
-		cout << "Usage: itemName [id]" << endl;
+		cout << "Usage: ItemName [id]" << endl;
 }
 
 void weaponName(Inventory &inv, std::string_view args)
 {
-	static std::regex rgx("[ ]?([[:digit:]]+)");
+	static std::regex rgx("[ ]?([[:digit:]]+|\\*)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, rgx)) {
-		wcout << inv.getWeaponName(static_cast<Inventory::WeaponId>(std::stoi(match[1]))) << endl;
+	if (std::regex_match(args.data(), match, rgx))
+	{
+		if (match[1] != '*')
+			wcout << inv.getWeaponName(static_cast<Inventory::WeaponId>(std::stoi(match[1]))) << endl;
+		else
+		{
+			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::WeaponId::Minigun2); ++i) {
+				auto name = inv.getWeaponName(static_cast<Inventory::WeaponId>(i));
+				if(!name.empty())
+					wcout << name << ": " << i << endl;
+			}
+		}
 	}
 	else
-		cout << "Usage: weaponName [id]" << endl;
+		cout << "Usage: WeaponName ([id] | *)" << endl;
 }
 
 void clear(std::string_view args)
@@ -71,10 +95,9 @@ void clear(std::string_view args)
 
 void getItemAt(Inventory &inv, std::string_view args)
 {
-	static std::regex rgx("[ ]?([[:digit:]]+)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, rgx))
+	if (std::regex_match(args.data(), match, singleDigitRegex))
 	{
 		auto item = inv.getItemAt(std::stoi(match[1]));
 
@@ -104,12 +127,12 @@ void setItemAt(Inventory &inv, std::string_view args)
 
 	if (std::regex_match(args.data(), match, rgx))
 	{
-		cout << "Slot: " << match[1] << endl;
+		/*cout << "Slot: " << match[1] << endl;
 		cout << "itemId: " << match[2] << endl;
 		cout << "weaponId: " << match[3] << endl;
 		cout << "upgrades: " << match[4] << endl;
 		cout << "ammoType: " << match[5] << endl;
-		cout << "ammo: " << match[6] << endl;
+		cout << "ammo: " << match[6] << endl;*/
 		auto item = inv.getItemAt(std::stoi(match[1]));
 
 		if (item)
@@ -153,13 +176,22 @@ void setTime(Stats &stats, std::string_view args)
 
 void setSaveCounter(Stats &stats, std::string_view args)
 {
-	static std::regex rgx("[ ]?([[:digit:]]+)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, rgx))
+	if (std::regex_match(args.data(), match, singleDigitRegex))
 		stats.setSaveCount(std::stoul(match[1]));
 	else
 		cout << "Usage: setSaveCounter [count]" << endl;
+}
+
+void setInventorySize(Inventory &inv, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, singleDigitRegex))
+		inv.setInventorySize(std::stoul(match[1]));
+	else
+		cout << "Usage: inventorySize [count]" << endl;
 }
 
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
@@ -180,6 +212,7 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 	handler.addHandler("clear", /*"",*/ clear);
 	handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
 	handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
+	handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
 
 	cout << "READY" << endl;
 
