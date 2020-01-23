@@ -88,7 +88,6 @@
     <ClCompile Include="src\Utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Bimap.h" />
     <ClInclude Include="include\CommandHandler.h" />
     <ClInclude Include="include\Features.h" />
     <ClInclude Include="include\Memory.h" />
