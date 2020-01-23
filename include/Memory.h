@@ -40,16 +40,24 @@ template<typename T>
 Pointer pointerPath(Pointer baseAddress, const T &offset)
 {
 	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
-	baseAddress += offset;
-	return baseAddress;
+	if (baseAddress) {
+		baseAddress += offset;
+		return baseAddress;
+	}
+	else
+		return nullptr;
 }
 
 template<typename T, typename ...Args>
 Pointer pointerPath(Pointer baseAddress, const T &offset, const Args& ...offsets)
 {
 	memcpy(&baseAddress, baseAddress, sizeof(Pointer));
-	baseAddress += offset;
-	return pointerPath(baseAddress, offsets...);
+	if (baseAddress) {
+		baseAddress += offset;
+		return pointerPath(baseAddress, offsets...);
+	}
+	else
+		return nullptr;
 }
 
 Pointer pointerPath(Pointer baseAddress, const std::vector<std::uint64_t> &offsets);
