@@ -1,6 +1,6 @@
 #include "Features.h"
 #include "Memory.h"
-#undef NDEBUG
+//#undef NDEBUG
 
 #ifndef NDEBUG
 #include <iostream>
@@ -44,7 +44,7 @@ struct Inventory::TextHash
 };
 
 Inventory::Inventory()
-	://mInventoryBase(patternScan("48 8B 15 ????????  45 33 C0  E8 ????????  0FB6 ??  48 8B 43 50  4C 39 70 18", processName)),
+	:mInventorySizeBase(patternScan("48 8B 15 ????????  45 33 C0  E8 ????????  0FB6 ??  48 8B 43 50  4C 39 70 18", processName)),
 	mExecutableBaseAddress(static_cast<Pointer>(getModuleInfo(processName).moduleBase)),
 	getWeaponTextHash(nullptr),
 	getItemTextHash(reinterpret_cast<decltype(getItemTextHash)>(patternScan("48 89 5C 24 10  48 89 74 24 18  48 89 7C 24 20  55  41 56  41 57  48 8B EC  48 83 EC 60  44 0FB7 15 ????????", processName))),
@@ -64,17 +64,17 @@ Inventory::Inventory()
 
 	getArgumentForGetItemAt = reinterpret_cast<decltype(getArgumentForGetItemAt)>(getPointerFromImmediate(getArgumentForGetItemAtPtr + 1));
 
-	//mInventoryBase = getPointerFromImmediate(mInventoryBase + 3);
+	mInventorySizeBase = getPointerFromImmediate(mInventorySizeBase + 3);
 	mBB0Base = getPointerFromImmediate(mBB0Base + 3);
 	getWeaponTextHash = (reinterpret_cast<decltype(getWeaponTextHash)>(getPointerFromImmediate(getWeaponTextHashPtr + 1)));
 	getName = (reinterpret_cast<decltype(getName)>(getPointerFromImmediate(getNamePtr + 1)));
 	mGetNameFirstParameter = getPointerFromImmediate(mGetNameFirstParameter + 3);
 	mUnnamedArgumentPointer = getPointerFromImmediate(mUnnamedArgumentPointer + 3);
 	getArgument = (reinterpret_cast<decltype(getArgument)>(getPointerFromImmediate(getArgumentPtr + 1)));
-
+	
 	#ifndef NDEBUG
 	cout << (void*)mExecutableBaseAddress << " -> mExecutableBaseAddress" << endl;
-	//cout << (void*)mInventoryBase << " -> mInventoryBase" << endl;
+	cout << (void*)mInventoryBase << " -> mInventoryBase" << endl;
 	cout << (void*)mGetNameFirstParameter << " -> mGetNameFirstParameter" << endl;
 	cout << (void*)mExecutableBaseAddress << " -> F0C0 Base" << endl;
 	cout << (void*)mBB0Base << " -> BB0 Base" << endl;
@@ -89,7 +89,8 @@ std::wstring_view Inventory::getWeaponName(WeaponId id)
 	std::wstring_view result;
 
 	getWeaponTextHash(getF0c0(mExecutableBaseAddress), getB10(mBB0Base), id, hash);
-	result = getName(getValue<Pointer>(mGetNameFirstParameter), hash);
+	if(auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
+		result = namePtr;
 
 	return result;
 }
@@ -100,7 +101,8 @@ std::wstring_view Inventory::getItemName(ItemId id)
 	std::wstring_view result;
 
 	TextHash &hash2 = getItemTextHash(hash, getF0c0(mExecutableBaseAddress), getValue<Pointer>(mBB0Base), id);
-	result = getName(getValue<Pointer>(mGetNameFirstParameter), hash);
+	if (auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
+		result = namePtr;
 
 	return result;
 }
@@ -130,6 +132,13 @@ Inventory::ItemData* Inventory::getItemAt(int slot)
 	}
 
 	return result;*/
+}
+
+void Inventory::setInventorySize(unsigned size)
+{
+	if (Pointer slotCountPtr = pointerPath(mInventorySizeBase, 0x50))
+		if (slotCountPtr = pointerPath(slotCountPtr, 0x90))
+			setValue(slotCountPtr, size);
 }
 
 //Inventory::GameInventory* Inventory::getInventoryPointer()

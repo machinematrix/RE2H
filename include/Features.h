@@ -15,13 +15,14 @@ public:
 	std::wstring_view getWeaponName(WeaponId id);
 	std::wstring_view getItemName(ItemId id);
 	ItemData* getItemAt(int slot);
+	void setInventorySize(unsigned size);
 
 private:
 	struct TextHash;
 	struct GameInventory;
 
 	Pointer mExecutableBaseAddress;
-	//Pointer mInventoryBase;
+	Pointer mInventorySizeBase;
 	Pointer mBB0Base;
 	Pointer mGetNameFirstParameter;
 	std::int64_t (*getWeaponTextHash)(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
