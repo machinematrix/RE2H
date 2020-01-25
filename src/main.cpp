@@ -47,9 +47,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 
 void itemName(Inventory &inv, std::string_view args)
 {
+	static std::regex rgx("[ ]?([[:digit:]]+|\\*)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, singleDigitRegex))
+	if (std::regex_match(args.data(), match, rgx))
 	{
 		if (match[1] != '*')
 			wcout << inv.getItemName(static_cast<Inventory::ItemId>(std::stoi(match[1]))) << endl;
