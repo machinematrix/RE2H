@@ -18,6 +18,7 @@ public:
 	void setInventorySize(unsigned size);
 
 private:
+	Pointer getF0c0();
 	struct TextHash;
 	struct GameInventory;
 
@@ -26,13 +27,16 @@ private:
 	Pointer mBB0Base;
 	Pointer mGetNameFirstParameter;
 	std::int64_t (*getWeaponTextHash)(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
-	TextHash& (*getItemTextHash)(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId); //00000269D1D5FBB0 bb0 returns a pointer to the first parameter
+	TextHash& (*getItemTextHash)(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId); //returns a pointer to the first parameter
 	const wchar_t* (*getName)(void*, TextHash&);
 
 	Pointer mUnnamedArgumentPointer;
 	void* (*getArgument)(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/);
 	void* (*getArgumentForGetItemAt)(void* /*F0C0*/, void* /*return value from getArgument*/);
 	ItemData* (*getItemAtSlot)(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/);
+
+	Pointer mF0C0ArgumentBase; //function that returns it and argument to function can be found from here
+	Pointer (*mGetF0C0Ptr)(Pointer /* *mF0C0Base */, std::uint32_t /*~0u*/);
 };
 
 struct Inventory::ItemData //This is a subclass, the base is probably at this - 0x60. The size of the object would be 0xF0 (240) bytes

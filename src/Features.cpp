@@ -20,10 +20,10 @@ namespace
 {
 	constexpr wchar_t processName[] = L"re2.exe";
 
-	Pointer getF0c0(Pointer executableBase)
+	/*Pointer getF0c0(Pointer executableBase)
 	{
 		return pointerPath(executableBase + FocoBase, 0x78, 0);
-	}
+	}*/
 
 	Pointer getB10(Pointer bb0Base)
 	{
@@ -54,7 +54,9 @@ Inventory::Inventory()
 	mUnnamedArgumentPointer(patternScan("48 8B 15 ????????  48 83 78 18 00  75 ??  48 85 D2  75 19  45 33 C0  41 8D 50 38  E8 ????????   32 C0  48 8B 5C 24 30  48 83 C4 20  5F  C3  48 8B 82", processName)), //multiple matches, but they all access the same variable
 	getArgument(nullptr),
 	getArgumentForGetItemAt(nullptr),
-	getItemAtSlot(reinterpret_cast<decltype(getItemAtSlot)>(patternScan("48 89 5C 24 18  48 89 7C 24 20  41 56  48 83 EC 20  48 8B 41 50  45 0FB6 F1  41 8B F8  48 8B D9  48 83 78 18 00  74 13  33 C0  48 8B 5C 24 40  48 8B 7C 24 48  48 83 C4 20  41 5E  C3", processName)))
+	getItemAtSlot(reinterpret_cast<decltype(getItemAtSlot)>(patternScan("48 89 5C 24 18  48 89 7C 24 20  41 56  48 83 EC 20  48 8B 41 50  45 0FB6 F1  41 8B F8  48 8B D9  48 83 78 18 00  74 13  33 C0  48 8B 5C 24 40  48 8B 7C 24 48  48 83 C4 20  41 5E  C3", processName))),
+	mF0C0ArgumentBase(patternScan("48 8B 0D ????????  E8 ????????  48 8B D8  83 78 78 00  75 ??  48 8B C8  E8 ????????  FF 43 78  48 8B 05  ????????", processName)),
+	mGetF0C0Ptr(reinterpret_cast<decltype(mGetF0C0Ptr)>(mF0C0ArgumentBase ? mF0C0ArgumentBase + 0x7 : nullptr))
 {
 	constexpr auto itemSize = sizeof(ItemData);
 	Pointer getWeaponTextHashPtr = patternScan("E8 ????????  48 8B 43 50  48 39 78 18  75 ??  8B 05 ????????  0FB7 0D", processName);
@@ -70,11 +72,13 @@ Inventory::Inventory()
 	getName = (reinterpret_cast<decltype(getName)>(getPointerFromImmediate(getNamePtr + 1)));
 	mGetNameFirstParameter = getPointerFromImmediate(mGetNameFirstParameter + 3);
 	mUnnamedArgumentPointer = getPointerFromImmediate(mUnnamedArgumentPointer + 3);
-	getArgument = (reinterpret_cast<decltype(getArgument)>(getPointerFromImmediate(getArgumentPtr + 1)));
-	
+	getArgument = reinterpret_cast<decltype(getArgument)>(getPointerFromImmediate(getArgumentPtr + 1));
+	mGetF0C0Ptr = reinterpret_cast<decltype(mGetF0C0Ptr)>(getPointerFromImmediate(mF0C0ArgumentBase + 0x8));
+	mF0C0ArgumentBase = getPointerFromImmediate(mF0C0ArgumentBase + 0x3);
+
 	#ifndef NDEBUG
 	cout << (void*)mExecutableBaseAddress << " -> mExecutableBaseAddress" << endl;
-	cout << (void*)mInventoryBase << " -> mInventoryBase" << endl;
+	cout << (void*)mInventorySizeBase << " -> mInventoryBase" << endl;
 	cout << (void*)mGetNameFirstParameter << " -> mGetNameFirstParameter" << endl;
 	cout << (void*)mExecutableBaseAddress << " -> F0C0 Base" << endl;
 	cout << (void*)mBB0Base << " -> BB0 Base" << endl;
@@ -88,7 +92,7 @@ std::wstring_view Inventory::getWeaponName(WeaponId id)
 	TextHash hash;
 	std::wstring_view result;
 
-	getWeaponTextHash(getF0c0(mExecutableBaseAddress), getB10(mBB0Base), id, hash);
+	getWeaponTextHash(getF0c0(/*mExecutableBaseAddress*/), getB10(mBB0Base), id, hash);
 	if(auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
 		result = namePtr;
 
@@ -100,7 +104,7 @@ std::wstring_view Inventory::getItemName(ItemId id)
 	TextHash hash;
 	std::wstring_view result;
 
-	TextHash &hash2 = getItemTextHash(hash, getF0c0(mExecutableBaseAddress), getValue<Pointer>(mBB0Base), id);
+	TextHash &hash2 = getItemTextHash(hash, getF0c0(/*mExecutableBaseAddress*/), getValue<Pointer>(mBB0Base), id);
 	if (auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
 		result = namePtr;
 
@@ -110,7 +114,7 @@ std::wstring_view Inventory::getItemName(ItemId id)
 Inventory::ItemData* Inventory::getItemAt(int slot)
 {
 	ItemData *result = nullptr;
-	auto f0c0 = getF0c0(mExecutableBaseAddress);
+	auto f0c0 = getF0c0(/*mExecutableBaseAddress*/);
 	auto arg = getArgument(f0c0, getValue<Pointer>(mUnnamedArgumentPointer) + 0x50);
 	if (arg) {
 		auto argForGetItemAt = getArgumentForGetItemAt(f0c0, arg);
@@ -139,6 +143,12 @@ void Inventory::setInventorySize(unsigned size)
 	if (Pointer slotCountPtr = pointerPath(mInventorySizeBase, 0x50))
 		if (slotCountPtr = pointerPath(slotCountPtr, 0x90))
 			setValue(slotCountPtr, size);
+}
+
+Pointer Inventory::getF0c0()
+{
+	Pointer result = mGetF0C0Ptr(getValue<Pointer>(mF0C0ArgumentBase), ~0u);
+	return result;
 }
 
 //Inventory::GameInventory* Inventory::getInventoryPointer()
