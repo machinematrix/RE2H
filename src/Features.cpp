@@ -1,6 +1,6 @@
 #include "Features.h"
 #include "Memory.h"
-//#undef NDEBUG
+#include <windows.h>
 
 #ifndef NDEBUG
 #include <iostream>
@@ -45,7 +45,6 @@ struct Inventory::TextHash
 
 Inventory::Inventory()
 	:mInventorySizeBase(patternScan("48 8B 15 ????????  45 33 C0  E8 ????????  0FB6 ??  48 8B 43 50  4C 39 70 18", processName)),
-	mExecutableBaseAddress(static_cast<Pointer>(getModuleInfo(processName).moduleBase)),
 	getWeaponTextHash(nullptr),
 	getItemTextHash(reinterpret_cast<decltype(getItemTextHash)>(patternScan("48 89 5C 24 10  48 89 74 24 18  48 89 7C 24 20  55  41 56  41 57  48 8B EC  48 83 EC 60  44 0FB7 15 ????????", processName))),
 	getName(nullptr),
@@ -56,9 +55,11 @@ Inventory::Inventory()
 	getArgumentForGetItemAt(nullptr),
 	getItemAtSlot(reinterpret_cast<decltype(getItemAtSlot)>(patternScan("48 89 5C 24 18  48 89 7C 24 20  41 56  48 83 EC 20  48 8B 41 50  45 0FB6 F1  41 8B F8  48 8B D9  48 83 78 18 00  74 13  33 C0  48 8B 5C 24 40  48 8B 7C 24 48  48 83 C4 20  41 5E  C3", processName))),
 	mF0C0ArgumentBase(patternScan("48 8B 0D ????????  E8 ????????  48 8B D8  83 78 78 00  75 ??  48 8B C8  E8 ????????  FF 43 78  48 8B 05  ????????", processName)),
-	mGetF0C0Ptr(reinterpret_cast<decltype(mGetF0C0Ptr)>(mF0C0ArgumentBase ? mF0C0ArgumentBase + 0x7 : nullptr))
+	mGetF0C0Ptr(reinterpret_cast<decltype(mGetF0C0Ptr)>(mF0C0ArgumentBase ? mF0C0ArgumentBase + 0x7 : nullptr)),
+	mWeaponInfoTableBase(patternScan("4C 8B 05 ????????  48 85 C9  74 ?? 48 8B 41 10", processName)),
+	mCapacityCheckOpcode(patternScan("0F4C D8  48 85 F6", processName))
+	//mFreeF0C0Ptr(reinterpret_cast<decltype(mFreeF0C0Ptr)>(patternScan("40 53  48 83 EC 20  48 8B 41 50  48 8B D9  48 83 78 08 00", processName)))
 {
-	constexpr auto itemSize = sizeof(ItemData);
 	Pointer getWeaponTextHashPtr = patternScan("E8 ????????  48 8B 43 50  48 39 78 18  75 ??  8B 05 ????????  0FB7 0D", processName);
 	Pointer getNamePtr = patternScan("E8 ????????  33 FF  48 85 C0  74 ??  48 C7 C1 FFFFFFFF  0F1F 44 00 00", processName);
 	Pointer getArgumentPtr = patternScan("E8 ????????  48 8B 4B 50  48 83 79 18 00  0F85 ????????  48 8B CB  48 85 C0  75 ??  45 33 C0  41 8D 50 38  48 8B 5C 24 30  48 8B 74 24 38  48 83 C4 20  5F  E9 ????????  48 8B D0  E8 ????????  48 8B 4B 50  48 8B F8  48 83 79 18 00  0F85 ????????  45 33 C0  48 8B D0", processName); //multiple matches, but they all access the same variable
@@ -75,12 +76,11 @@ Inventory::Inventory()
 	getArgument = reinterpret_cast<decltype(getArgument)>(getPointerFromImmediate(getArgumentPtr + 1));
 	mGetF0C0Ptr = reinterpret_cast<decltype(mGetF0C0Ptr)>(getPointerFromImmediate(mF0C0ArgumentBase + 0x8));
 	mF0C0ArgumentBase = getPointerFromImmediate(mF0C0ArgumentBase + 0x3);
+	mWeaponInfoTableBase = getPointerFromImmediate(mWeaponInfoTableBase + 0x3);
 
 	#ifndef NDEBUG
-	cout << (void*)mExecutableBaseAddress << " -> mExecutableBaseAddress" << endl;
 	cout << (void*)mInventorySizeBase << " -> mInventoryBase" << endl;
 	cout << (void*)mGetNameFirstParameter << " -> mGetNameFirstParameter" << endl;
-	cout << (void*)mExecutableBaseAddress << " -> F0C0 Base" << endl;
 	cout << (void*)mBB0Base << " -> BB0 Base" << endl;
 	cout << getWeaponTextHash << " -> getWeaponTextHash entry point" << endl;
 	cout << getName << " -> getName entry point" << endl;
@@ -91,10 +91,13 @@ std::wstring_view Inventory::getWeaponName(WeaponId id)
 {
 	TextHash hash;
 	std::wstring_view result;
+	auto f0c0 = getF0c0();
 
-	getWeaponTextHash(getF0c0(/*mExecutableBaseAddress*/), getB10(mBB0Base), id, hash);
+	getWeaponTextHash(f0c0, getB10(mBB0Base), id, hash);
 	if(auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
 		result = namePtr;
+
+	//mFreeF0C0Ptr(f0c0);
 
 	return result;
 }
@@ -103,10 +106,13 @@ std::wstring_view Inventory::getItemName(ItemId id)
 {
 	TextHash hash;
 	std::wstring_view result;
+	auto f0c0 = getF0c0();
 
-	TextHash &hash2 = getItemTextHash(hash, getF0c0(/*mExecutableBaseAddress*/), getValue<Pointer>(mBB0Base), id);
+	TextHash &hash2 = getItemTextHash(hash, f0c0, getValue<Pointer>(mBB0Base), id);
 	if (auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
 		result = namePtr;
+
+	//mFreeF0C0Ptr(f0c0);
 
 	return result;
 }
@@ -114,28 +120,17 @@ std::wstring_view Inventory::getItemName(ItemId id)
 Inventory::ItemData* Inventory::getItemAt(int slot)
 {
 	ItemData *result = nullptr;
-	auto f0c0 = getF0c0(/*mExecutableBaseAddress*/);
+	auto f0c0 = getF0c0();
 	auto arg = getArgument(f0c0, getValue<Pointer>(mUnnamedArgumentPointer) + 0x50);
+	
 	if (arg) {
 		auto argForGetItemAt = getArgumentForGetItemAt(f0c0, arg);
 		result = getItemAtSlot(f0c0, getValue<void*>((Pointer)argForGetItemAt + 0xA8), slot);
 	}
 
-	return result;
-	/*ItemData *result = nullptr;
-	
-	if (auto inv = getInventoryPointer())
-	{
-		for (auto item : inv->items)
-		{
-			if (item->slotIndex == slot) {
-				result = item;
-				break;
-			}
-		}
-	}
+	//mFreeF0C0Ptr(f0c0);
 
-	return result;*/
+	return result;
 }
 
 void Inventory::setInventorySize(unsigned size)
@@ -145,37 +140,41 @@ void Inventory::setInventorySize(unsigned size)
 			setValue(slotCountPtr, size);
 }
 
-Pointer Inventory::getF0c0()
+void Inventory::setWeaponMagazineSize(WeaponId id, int capacity)
 {
-	Pointer result = mGetF0C0Ptr(getValue<Pointer>(mF0C0ArgumentBase), ~0u);
-	return result;
+	Pointer weaponInfoTable = pointerPath(mWeaponInfoTableBase, 0x78, 0x30, 0);
+	int tableSize = getValue<int>(weaponInfoTable + 0x1C);
+	weaponInfoTable += 0x20;
+
+	for (std::int64_t i = 0; i < tableSize; ++i)
+	{
+		if (getValue<WeaponId>(pointerPath(weaponInfoTable + i * 8, 0x10)) == id) {
+			setValue(pointerPath(weaponInfoTable + i * 8, 0x18, 0x20, 0x48), capacity);
+			break;
+		}
+	}
 }
 
-//Inventory::GameInventory* Inventory::getInventoryPointer()
-//{
-//	/*Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0x88);
-//	if (invClaire) {
-//		if (!(getValue<std::uint64_t>(invClaire) & 0x00FF000000000000))
-//			return reinterpret_cast<GameInventory*>(pointerPath(invClaire, 0x50, 0x10));
-//		else
-//			return nullptr;
-//	}
-//	else
-//		return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));*/
-//	Pointer invClaire = pointerPath(mInventoryBase, 0xC8, 0x38, 0xC8);
-//	if (getValue<Pointer>(invClaire))
-//	{
-//		invClaire = pointerPath(invClaire, 0x10, 0x110, 0x10);
-//		if ((reinterpret_cast<std::int64_t>(invClaire) & 0x0000FFF000000000) != 0x00007FF000000000)
-//		{
-//			return reinterpret_cast<GameInventory*>(invClaire);
-//		}
-//		else
-//			return reinterpret_cast<GameInventory*>(pointerPath(mInventoryBase, 0xC8, 0x38, 0xE0, 0x10));
-//	}
-//	else
-//		return nullptr;
-//}
+void Inventory::toggleItemCapacityCheck(bool toggle)
+{
+	DWORD protect;
+	if (VirtualProtect(mCapacityCheckOpcode, 3, PAGE_EXECUTE_READWRITE, &protect))
+	{
+		if (toggle) {
+			const char *original = "\x0F\x4C\xD8";
+			memcpy(mCapacityCheckOpcode, original, 3);
+		}
+		else
+			memset(mCapacityCheckOpcode, 0x90, 3);
+
+		VirtualProtect(mCapacityCheckOpcode, 3, protect, &protect);
+	}
+}
+
+Pointer Inventory::getF0c0()
+{
+	return mGetF0C0Ptr(getValue<Pointer>(mF0C0ArgumentBase), ~0u);
+}
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
