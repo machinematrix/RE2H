@@ -81,7 +81,7 @@ void weaponName(Inventory &inv, std::string_view args)
 			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::WeaponId::Minigun2); ++i) {
 				auto name = inv.getWeaponName(static_cast<Inventory::WeaponId>(i));
 				if(!name.empty())
-					wcout << name << ": " << i << endl;
+					wcout << i << ": " << name << endl;
 			}
 		}
 	}
@@ -100,11 +100,8 @@ void getItemAt(Inventory &inv, std::string_view args)
 
 	if (std::regex_match(args.data(), match, singleDigitRegex))
 	{
-		auto item = inv.getItemAt(std::stoi(match[1]));
-
-		if (item)
+		if (auto item = inv.getItemAt(std::stoi(match[1])))
 		{
-			item;
 			if (item->weaponId != Inventory::WeaponId::Invalid) { //if it's a gun
 				wcout << inv.getWeaponName(item->weaponId);
 				if (item->ammoType != Inventory::ItemId::Invalid)
@@ -195,6 +192,33 @@ void setInventorySize(Inventory &inv, std::string_view args)
 		cout << "Usage: inventorySize [count]" << endl;
 }
 
+void setWeaponCapacity(Inventory &inv, std::string_view args)
+{
+	static std::regex rgx("[ ]?([[:digit:]]+) ([[:digit:]]+)");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+		inv.setWeaponMagazineSize(static_cast<Inventory::WeaponId>(std::stoi(match[1])), std::stoi(match[2]));
+	else
+		cout << "Usage: weaponCapacity [id] [value]" << endl;
+}
+
+void toggleCapacityCheck(Inventory &inv, std::string_view args)
+{
+	static std::regex rgx("[ ]?(true|false|0|1)");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+	{
+		if (match[1] == "true" || match[1] == "1")
+			inv.toggleItemCapacityCheck(true);
+		else
+			inv.toggleItemCapacityCheck(false);
+	}
+	else
+		cout << "Usage: capacityCheck [true|false|0|1]" << endl;
+}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -206,14 +230,16 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 	Stats stats;
 	HWND consoleWindow;
 
-	handler.addHandler("ItemName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(itemName, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("WeaponName", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(weaponName, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("get", /*"[[:space:]]?([[:digit:]]+)",*/ std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("set", /*"[ ]?([[:digit:]]+) (?:itemId:([[:digit:]]+)*)?[ ]?(?:weaponId:([[:digit:]]+)*)?[ ]?(?:upgrades:([[:digit:]]+)*)?[ ]?(?:ammoType:([[:digit:]]+)*)?[ ]?(?:ammo:([[:digit:]]+)*)?",*/ std::bind(setItemAt, inv, std::placeholders::_1));
-	handler.addHandler("clear", /*"",*/ clear);
+	handler.addHandler("ItemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("WeaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("get", std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("set", std::bind(setItemAt, inv, std::placeholders::_1));
+	handler.addHandler("clear", clear);
 	handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
 	handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
 	handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
+	handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
 
 	cout << "READY" << endl;
 
@@ -224,7 +250,7 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		try {
 			handler.callHandler(command, args);
 		}
-		catch (const CommandHandlerException & e) {
+		catch (const CommandHandlerException &e) {
 			cout << e.what() << endl;
 		}
 	}
