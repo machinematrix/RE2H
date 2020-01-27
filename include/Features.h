@@ -2,6 +2,7 @@
 #define __FEATURES__
 #include <cstdint>
 #include <string_view>
+#include <stdexcept>
 
 class Inventory
 {
@@ -22,25 +23,23 @@ public:
 private:
 	Pointer getF0c0();
 	struct TextHash;
-	struct GameInventory;
 
 	Pointer mInventorySizeBase; //re2.exe+70A17E0
 	Pointer mBB0Base; //re2.exe+70A5EA8
 	Pointer mGetNameFirstParameter; //re2,exe+7095BF0
-	std::int64_t (*getWeaponTextHash)(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
-	TextHash& (*getItemTextHash)(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId); //returns a pointer to the first parameter
-	const wchar_t* (*getName)(void*, TextHash&);
-
-	Pointer mUnnamedArgumentPointer; //re2.exe+709B5E0
-	void* (*getArgument)(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/);
-	void* (*getArgumentForGetItemAt)(void* /*F0C0*/, void* /*return value from getArgument*/);
-	ItemData* (*getItemAtSlot)(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/);
-
-	Pointer mF0C0ArgumentBase; //re2.exe+7095E08 function that returns it and argument to function can be found from here
-	Pointer (*mGetF0C0Ptr)(Pointer /* *mF0C0Base */, std::uint32_t /*~0u*/);
-
 	Pointer mWeaponInfoTableBase; //re2.exe+709C2F0
 	Pointer mCapacityCheckOpcode;
+	Pointer mF0C0ArgumentBase; //re2.exe+7095E08 function that returns it and argument to function can be found from here
+	Pointer mUnnamedArgumentPointer; //re2.exe+709B5E0
+
+	//Game functions
+	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
+	TextHash&		(*getItemTextHash)			(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId); //returns a pointer to the first argument
+	const wchar_t*	(*getName)					(void*, TextHash&);
+	void*			(*getArgument)				(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/);
+	void*			(*getArgumentForGetItemAt)	(void* /*F0C0*/, void* /*return value from getArgument*/);
+	ItemData*		(*getItemAtSlot)			(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/);
+	void*			(*mGetF0C0Ptr)				(void* /* *mF0C0Base */, std::uint32_t /*~0u*/);
 	//void* (*mFreeF0C0Ptr)(Pointer);
 };
 
@@ -51,7 +50,7 @@ private:
 	std::uint64_t unknownInt1;
 	void *derivedPtr; //points to this+0x60
 	void *unknownPtr2; //points to this+0x90
-	void *unknownPtr3; //changes in SLS60 when changing ammo type. points to this+0xC0
+	void *unknownPtr3; //changes in SLS60 when changing ammo type. sometimes points to this+0xC0
 public:
 	std::uint64_t slotIndex; //zero-based left-to-right index of this item in inventory
 private:
