@@ -14,9 +14,14 @@ void RedirectSTDIO()
 	std::cin.clear();
 }
 
-void ErrorBox(HWND hWnd, const String &text)
+void ErrorBox(HWND hWnd, std::wstring_view text)
 {
-	MessageBox(hWnd, text.c_str(), TEXT("Error"), MB_ICONERROR);
+	MessageBoxW(hWnd, text.data(), L"Error", MB_ICONERROR);
+}
+
+void ErrorBox(HWND hWnd, std::string_view text)
+{
+	MessageBoxA(hWnd, text.data(), "Error", MB_ICONERROR);
 }
 
 String GetControlText(HWND hWnd)
