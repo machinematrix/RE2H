@@ -59,7 +59,7 @@ void itemName(Inventory &inv, std::string_view args)
 			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::ItemId::StuffedDoll); ++i) {
 				auto name = inv.getItemName(static_cast<Inventory::ItemId>(i));
 				if (!name.empty())
-					wcout << name << ": " << i << endl;
+					wcout << i << ": " << name << endl;
 			}
 		}
 	}
@@ -223,39 +223,43 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
 	RedirectSTDIO();
+	HWND consoleWindow = GetConsoleWindow();
 
-	std::string command, args;
-	CommandHandler handler;
-	Inventory inv;
-	Stats stats;
-	HWND consoleWindow;
+	try {
+		std::string command, args;
+		CommandHandler handler;
+		Inventory inv;
+		Stats stats;
 
-	handler.addHandler("ItemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("WeaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("get", std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("set", std::bind(setItemAt, inv, std::placeholders::_1));
-	handler.addHandler("clear", clear);
-	handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
-	handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
-	handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
-	handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("ItemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("WeaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("get", std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("set", std::bind(setItemAt, inv, std::placeholders::_1));
+		handler.addHandler("clear", clear);
+		handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
+		handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
+		handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
 
-	cout << "READY" << endl;
+		cout << "READY" << endl;
 
-	while (cin >> command)
-	{
-		std::getline(cin, args);
+		while (cin >> command)
+		{
+			std::getline(cin, args);
 
-		try {
-			handler.callHandler(command, args);
-		}
-		catch (const CommandHandlerException &e) {
-			cout << e.what() << endl;
+			try {
+				handler.callHandler(command, args);
+			}
+			catch (const CommandHandlerException & e) {
+				cout << e.what() << endl;
+			}
 		}
 	}
+	catch (const std::runtime_error &e) {
+		ErrorBox(consoleWindow, e.what());
+	}
 
-	consoleWindow = GetConsoleWindow();
 	FreeConsole();
 	PostMessage(consoleWindow, WM_CLOSE, 0, 0);
 	FreeLibraryAndExitThread((HMODULE)lpParameter, 0/*(DWORD)msg.wParam*/);
