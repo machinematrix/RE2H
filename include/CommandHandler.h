@@ -4,6 +4,7 @@
 #include <tuple>
 #include <functional>
 #include <string_view>
+#include <string>
 #include <stdexcept>
 
 class CommandHandler

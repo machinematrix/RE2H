@@ -45,7 +45,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 	return TRUE;
 }
 
-void itemName(Inventory &inv, std::string_view args)
+void itemName(Game &inv, std::string_view args)
 {
 	static std::regex rgx("[ ]?([[:digit:]]+|\\*)");
 	std::cmatch match;
@@ -53,11 +53,11 @@ void itemName(Inventory &inv, std::string_view args)
 	if (std::regex_match(args.data(), match, rgx))
 	{
 		if (match[1] != '*')
-			wcout << inv.getItemName(static_cast<Inventory::ItemId>(std::stoi(match[1]))) << endl;
+			wcout << inv.getItemName(static_cast<Game::ItemId>(std::stoi(match[1]))) << endl;
 		else
 		{
-			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::ItemId::StuffedDoll); ++i) {
-				auto name = inv.getItemName(static_cast<Inventory::ItemId>(i));
+			for (unsigned i = 0; i <= static_cast<unsigned>(Game::ItemId::StuffedDoll); ++i) {
+				auto name = inv.getItemName(static_cast<Game::ItemId>(i));
 				if (!name.empty())
 					wcout << i << ": " << name << endl;
 			}
@@ -67,7 +67,7 @@ void itemName(Inventory &inv, std::string_view args)
 		cout << "Usage: ItemName [id]" << endl;
 }
 
-void weaponName(Inventory &inv, std::string_view args)
+void weaponName(Game &inv, std::string_view args)
 {
 	static std::regex rgx("[ ]?([[:digit:]]+|\\*)");
 	std::cmatch match;
@@ -75,11 +75,11 @@ void weaponName(Inventory &inv, std::string_view args)
 	if (std::regex_match(args.data(), match, rgx))
 	{
 		if (match[1] != '*')
-			wcout << inv.getWeaponName(static_cast<Inventory::WeaponId>(std::stoi(match[1]))) << endl;
+			wcout << inv.getWeaponName(static_cast<Game::WeaponId>(std::stoi(match[1]))) << endl;
 		else
 		{
-			for (unsigned i = 0; i <= static_cast<unsigned>(Inventory::WeaponId::Minigun2); ++i) {
-				auto name = inv.getWeaponName(static_cast<Inventory::WeaponId>(i));
+			for (unsigned i = 0; i <= static_cast<unsigned>(Game::WeaponId::Minigun2); ++i) {
+				auto name = inv.getWeaponName(static_cast<Game::WeaponId>(i));
 				if(!name.empty())
 					wcout << i << ": " << name << endl;
 			}
@@ -94,7 +94,7 @@ void clear(std::string_view args)
 	system("cls");
 }
 
-void getItemAt(Inventory &inv, std::string_view args)
+void getItemAt(Game &inv, std::string_view args)
 {
 	std::cmatch match;
 
@@ -102,13 +102,13 @@ void getItemAt(Inventory &inv, std::string_view args)
 	{
 		if (auto item = inv.getItemAt(std::stoi(match[1])))
 		{
-			if (item->weaponId != Inventory::WeaponId::Invalid) { //if it's a gun
+			if (item->weaponId != Game::WeaponId::Invalid) { //if it's a gun
 				wcout << inv.getWeaponName(item->weaponId);
-				if (item->ammoType != Inventory::ItemId::Invalid)
+				if (item->ammoType != Game::ItemId::Invalid)
 					wcout << ", " << item->ammo << ' ' << inv.getItemName(item->ammoType) << " rounds";
 				wcout << endl;
 			}
-			else if (item->itemId != Inventory::ItemId::Invalid) { //if it's an item
+			else if (item->itemId != Game::ItemId::Invalid) { //if it's an item
 				wcout << inv.getItemName(item->itemId) << " quantity: " << item->ammo << endl;
 			}
 		}
@@ -118,7 +118,7 @@ void getItemAt(Inventory &inv, std::string_view args)
 }
 
 //slot item weapon upgrades ammoType ammo
-void setItemAt(Inventory &inv, std::string_view args)
+void setItemAt(Game &inv, std::string_view args)
 {
 	static std::regex rgx("[ ]?([[:digit:]]+) (?:itemId:([[:digit:]]+)|weaponId:([[:digit:]]+))?[ ]?(?:upgrades:([[:digit:]]+)*)?[ ]?(?:ammoType:([[:digit:]]+)*)?[ ]?(?:ammo:([[:digit:]]+)*)?");
 	std::cmatch match;
@@ -136,19 +136,19 @@ void setItemAt(Inventory &inv, std::string_view args)
 		if (item)
 		{
 			if (match[2].matched) {
-				item->itemId = Inventory::ItemId(std::stoi(match[2]));
-				item->weaponId = Inventory::WeaponId::Invalid;
+				item->itemId = Game::ItemId(std::stoi(match[2]));
+				item->weaponId = Game::WeaponId::Invalid;
 			}
 			else if (match[3].matched) {
-				item->weaponId = Inventory::WeaponId(std::stoi(match[3]));
-				item->itemId = Inventory::ItemId::Invalid;
+				item->weaponId = Game::WeaponId(std::stoi(match[3]));
+				item->itemId = Game::ItemId::Invalid;
 			}
 
 			if (match[4].matched)
 				item->upgrades = std::stoi(match[4]);
 
 			if (match[5].matched)
-				item->ammoType = Inventory::ItemId(std::stoi(match[5]));
+				item->ammoType = Game::ItemId(std::stoi(match[5]));
 
 			if (match[6].matched)
 				item->ammo = std::stoi(match[6]);
@@ -161,7 +161,7 @@ void setItemAt(Inventory &inv, std::string_view args)
 		cout << "Usage: set [slot] (itemId:[id] | weaponId:[id]) upgrades:[val] ammoType:[id] ammo:[value]\nAll arguments except slot are optional, but they must appear in the order shown above" << endl;
 }
 
-void setTime(Stats &stats, std::string_view args)
+void setTime(Game &stats, std::string_view args)
 {
 	static std::regex rgx("[ ]?([[:digit:]]{2}):([[:digit:]]{2}):([[:digit:]]{2})");
 	std::cmatch match;
@@ -172,7 +172,7 @@ void setTime(Stats &stats, std::string_view args)
 		cout << "Usage: setTime [hh:mm:ss]" << endl;
 }
 
-void setSaveCounter(Stats &stats, std::string_view args)
+void setSaveCounter(Game &stats, std::string_view args)
 {
 	std::cmatch match;
 
@@ -182,7 +182,7 @@ void setSaveCounter(Stats &stats, std::string_view args)
 		cout << "Usage: setSaveCounter [count]" << endl;
 }
 
-void setInventorySize(Inventory &inv, std::string_view args)
+void setInventorySize(Game &inv, std::string_view args)
 {
 	std::cmatch match;
 
@@ -192,18 +192,18 @@ void setInventorySize(Inventory &inv, std::string_view args)
 		cout << "Usage: inventorySize [count]" << endl;
 }
 
-void setWeaponCapacity(Inventory &inv, std::string_view args)
+void setWeaponCapacity(Game &inv, std::string_view args)
 {
 	static std::regex rgx("[ ]?([[:digit:]]+) ([[:digit:]]+)");
 	std::cmatch match;
 
 	if (std::regex_match(args.data(), match, rgx))
-		inv.setWeaponMagazineSize(static_cast<Inventory::WeaponId>(std::stoi(match[1])), std::stoi(match[2]));
+		inv.setWeaponMagazineSize(static_cast<Game::WeaponId>(std::stoi(match[1])), std::stoi(match[2]));
 	else
 		cout << "Usage: weaponCapacity [id] [value]" << endl;
 }
 
-void toggleCapacityCheck(Inventory &inv, std::string_view args)
+void toggleCapacityCheck(Game &inv, std::string_view args)
 {
 	static std::regex rgx("[ ]?(true|false|0|1)");
 	std::cmatch match;
@@ -219,6 +219,28 @@ void toggleCapacityCheck(Inventory &inv, std::string_view args)
 		cout << "Usage: capacityCheck [true|false|0|1]" << endl;
 }
 
+void setItemCapacity(Game &inv, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, singleDigitRegex))
+	{
+		inv.setUniversalItemCapacity(std::stoi(match[1]));
+	}
+	else
+		cout << "Usage: itemCapacity [value]\nif value is less than or equal to zero, default capacities are used" << endl;
+}
+
+void setHealth(Game &inv, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, singleDigitRegex))
+		inv.setHealth(std::stoi(match[1]));
+	else
+		cout << inv.getHealth() << endl;
+}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -228,32 +250,35 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 	try {
 		std::string command, args;
 		CommandHandler handler;
-		Inventory inv;
-		Stats stats;
+		Game inv;
 
 		handler.addHandler("ItemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("WeaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("get", std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
-		handler.addHandler("set", std::bind(setItemAt, inv, std::placeholders::_1));
+		handler.addHandler("set", std::bind(setItemAt, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("clear", clear);
-		handler.addHandler("setTime", std::bind(setTime, std::ref(stats), std::placeholders::_1));
-		handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(stats), std::placeholders::_1));
+		handler.addHandler("setTime", std::bind(setTime, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("itemCapacity", std::bind(setItemCapacity, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("health", std::bind(setHealth, std::ref(inv), std::placeholders::_1));
 
 		cout << "READY" << endl;
+		cout << ">> ";
 
-		while (cin >> command)
+		while (cin >> command && command != "exit")
 		{
 			std::getline(cin, args);
 
 			try {
 				handler.callHandler(command, args);
 			}
-			catch (const CommandHandlerException & e) {
+			catch (const CommandHandlerException &e) {
 				cout << e.what() << endl;
 			}
+			cout << ">> ";
 		}
 	}
 	catch (const std::runtime_error &e) {
