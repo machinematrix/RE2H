@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 #include <regex>
+#include <iostream>
+#include <iomanip>
 #include "Utility.h"
 #include "Features.h"
 #include "CommandHandler.h"
@@ -23,6 +25,7 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 namespace
 {
 	std::regex singleDigitRegex("[ ]?([[:digit:]]+)");
+	std::regex stringRegex("[ ]?(.+)");
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
@@ -58,13 +61,13 @@ void itemName(Game &inv, std::string_view args)
 		{
 			for (unsigned i = 0; i <= static_cast<unsigned>(Game::ItemId::StuffedDoll); ++i) {
 				auto name = inv.getItemName(static_cast<Game::ItemId>(i));
-				if (!name.empty())
-					wcout << i << ": " << name << endl;
+				if (!name.empty() && name.find(L"<COLOR") == std::wstring_view::npos)
+					wcout << std::setfill(L'0') << std::setw(3) << i << std::setw(0) << ": " << name << endl;
 			}
 		}
 	}
 	else
-		cout << "Usage: ItemName [id]" << endl;
+		cout << "Usage: itemName [id]" << endl;
 }
 
 void weaponName(Game &inv, std::string_view args)
@@ -80,13 +83,51 @@ void weaponName(Game &inv, std::string_view args)
 		{
 			for (unsigned i = 0; i <= static_cast<unsigned>(Game::WeaponId::Minigun2); ++i) {
 				auto name = inv.getWeaponName(static_cast<Game::WeaponId>(i));
-				if(!name.empty())
-					wcout << i << ": " << name << endl;
+				if(!name.empty() && name.find(L"<COLOR") == std::wstring_view::npos)
+					wcout << std::setfill(L'0') << std::setw(3) << i << std::setw(0) << ": " << name << endl;
 			}
 		}
 	}
 	else
-		cout << "Usage: WeaponName ([id] | *)" << endl;
+		cout << "Usage: weaponName ([id] | *)" << endl;
+}
+
+void weaponId(Game &game, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, stringRegex))
+	{
+		std::string asciiName = match[1];
+		std::wstring unicodeName(asciiName.begin(), asciiName.end());
+		auto id = game.getWeaponId(unicodeName);
+
+		if (id != Game::WeaponId::Invalid) {
+			cout << static_cast<int>(id) << endl;
+		}
+		else cout << "Invalid name" << endl;
+	}
+	else
+		cout << "Usage: weaponId [name]" << endl;
+}
+
+void itemId(Game &game, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, stringRegex))
+	{
+		std::string asciiName = match[1];
+		std::wstring unicodeName(asciiName.begin(), asciiName.end());
+		auto id = game.getItemId(unicodeName);
+
+		if (id != Game::ItemId::Invalid) {
+			cout << static_cast<int>(id) << endl;
+		}
+		else cout << "Invalid name" << endl;
+	}
+	else
+		cout << "Usage: itemId [name]" << endl;
 }
 
 void clear(std::string_view args)
@@ -103,7 +144,7 @@ void getItemAt(Game &inv, std::string_view args)
 		if (auto item = inv.getItemAt(std::stoi(match[1])))
 		{
 			if (item->weaponId != Game::WeaponId::Invalid) { //if it's a gun
-				wcout << inv.getWeaponName(item->weaponId);
+				wcout << item << ": " << inv.getWeaponName(item->weaponId);
 				if (item->ammoType != Game::ItemId::Invalid)
 					wcout << ", " << item->ammo << ' ' << inv.getItemName(item->ammoType) << " rounds";
 				wcout << endl;
@@ -250,10 +291,11 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 	try {
 		std::string command, args;
 		CommandHandler handler;
+		int firstChar;
 		Game inv;
 
-		handler.addHandler("ItemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
-		handler.addHandler("WeaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("itemName", std::bind(itemName, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("weaponName", std::bind(weaponName, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("get", std::bind(getItemAt, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("set", std::bind(setItemAt, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("clear", clear);
@@ -264,19 +306,25 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("itemCapacity", std::bind(setItemCapacity, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("health", std::bind(setHealth, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("weaponId", std::bind(weaponId, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("itemId", std::bind(itemId, std::ref(inv), std::placeholders::_1));
 
-		cout << "READY" << endl;
 		cout << ">> ";
 
-		while (cin >> command && command != "exit")
+		while ((firstChar = cin.get())
+			   && (firstChar != '\n' ? (cin.unget(), cin >> command) : (command = firstChar, cin))
+			   && command != "exit")
 		{
-			std::getline(cin, args);
+			if (command.front() != '\n')
+			{
+				std::getline(cin, args);
 
-			try {
-				handler.callHandler(command, args);
-			}
-			catch (const CommandHandlerException &e) {
-				cout << e.what() << endl;
+				try {
+					handler.callHandler(command, args);
+				}
+				catch (const CommandHandlerException & e) {
+					cout << e.what() << endl;
+				}
 			}
 			cout << ">> ";
 		}
