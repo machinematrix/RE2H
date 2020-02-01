@@ -42,26 +42,26 @@ private:
 
 	std::unordered_map<std::wstring_view, WeaponId> mWeaponIds;
 	std::unordered_map<std::wstring_view, ItemId> mItemIds;
-	Pointer mInventorySizeBase; //re2.exe+70A17E0
-	Pointer mBB0Base; //re2.exe+70A5EA8
-	Pointer mGetNameFirstParameter; //re2.exe+7095BF0
-	Pointer mWeaponInfoTableBase; //re2.exe+709C2F0
-	Pointer mCapacityCheckOpcode;
-	Pointer mF0C0ArgumentBase; //re2.exe+7095E08 function that returns it and argument to function can be found from here
-	Pointer mUnnamedArgumentPointer; //re2.exe+709B5E0
-	Pointer mItemCapacityFunction;
-	Pointer mTimerBase; //re2.exe+709E120
-	Pointer mSaveCounterBase; //re2.exe+700A8860
-	Pointer mHealthBase; //re2.exe+70A7CD0 -> 0x50 -> 0x230
+	Pointer mInventorySizeBase = nullptr; //re2.exe+70A17E0
+	Pointer mBB0Base = nullptr; //re2.exe+70A5EA8
+	Pointer mGetNameFirstParameter = nullptr; //re2.exe+7095BF0
+	Pointer mWeaponInfoTableBase = nullptr; //re2.exe+709C2F0
+	Pointer mCapacityCheckOpcode = nullptr;
+	Pointer mF0C0ArgumentBase = nullptr; //re2.exe+7095E08 function that returns it and argument to function can be found from here
+	Pointer mUnnamedArgumentPointer = nullptr; //re2.exe+709B5E0
+	Pointer mItemCapacityFunction = nullptr;
+	Pointer mTimerBase = nullptr; //re2.exe+709E120
+	Pointer mSaveCounterBase = nullptr; //re2.exe+700A8860
+	Pointer mHealthBase = nullptr; //re2.exe+70A7CD0 -> 0x50 -> 0x230
 
 	//Game functions
-	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&); //returns 0 if it can't find the name
-	TextHash&		(*getItemTextHash)			(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId); //returns a pointer to the first argument
-	const wchar_t*	(*getName)					(void*, TextHash&);
-	void*			(*getArgument)				(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/);
-	void*			(*getArgumentForGetItemAt)	(void* /*F0C0*/, void* /*return value from getArgument*/);
-	ItemData*		(*getItemAtSlot)			(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/);
-	void*			(*mGetF0C0Ptr)				(void* /* *mF0C0Base */, std::uint32_t /*~0u*/);
+	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&) = nullptr; //returns 0 if it can't find the name
+	TextHash&		(*getItemTextHash)			(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId) = nullptr; //returns a pointer to the first argument
+	const wchar_t*	(*getName)					(void*, TextHash&) = nullptr;
+	void*			(*getArgument)				(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/) = nullptr;
+	void*			(*getArgumentForGetItemAt)	(void* /*F0C0*/, void* /*return value from getArgument*/) = nullptr;
+	ItemData*		(*getItemAtSlot)			(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/) = nullptr;
+	void*			(*getF0C0Ptr)				(void* /* *mF0C0Base */, std::uint32_t /*~0u*/) = nullptr;
 	//int (*damagePlayer)(void* /*F0C0*/, void*, int);
 };
 
