@@ -109,6 +109,20 @@ Game::Game()
 	mSaveCounterBase = getPointerFromImmediate(mSaveCounterBase + 3);
 	mHealthBase = getPointerFromImmediate(mHealthBase + 3);
 
+	for (unsigned i = 0; i <= static_cast<unsigned>(Game::ItemId::StuffedDoll); ++i)
+	{
+		auto name = getItemName(static_cast<Game::ItemId>(i));
+		if (!name.empty() && name.find(L"<COLOR") == std::wstring_view::npos)
+			mItemIds[name] = static_cast<ItemId>(i);
+	}
+
+	for (unsigned i = 0; i <= static_cast<unsigned>(Game::WeaponId::Minigun2); ++i)
+	{
+		auto name = getWeaponName(static_cast<Game::WeaponId>(i));
+		if (!name.empty() && name.find(L"<COLOR") == std::wstring_view::npos)
+			mWeaponIds[name] = static_cast<WeaponId>(i);
+	}
+
 	#ifndef NDEBUG
 	cout << (void*)mInventorySizeBase << " -> mInventoryBase" << endl;
 	cout << (void*)mGetNameFirstParameter << " -> mGetNameFirstParameter" << endl;
@@ -148,6 +162,28 @@ std::wstring_view Game::getItemName(ItemId id)
 	TextHash &hash2 = getItemTextHash(hash, f0c0, getValue<Pointer>(mBB0Base), id);
 	if (auto namePtr = getName(getValue<Pointer>(mGetNameFirstParameter), hash))
 		result = namePtr;
+
+	return result;
+}
+
+Game::WeaponId Game::getWeaponId(std::wstring_view name)
+{
+	WeaponId result = WeaponId::Invalid;
+	auto it = mWeaponIds.find(name);
+
+	if (it != mWeaponIds.end())
+		result = it->second;
+
+	return result;
+}
+
+Game::ItemId Game::getItemId(std::wstring_view name)
+{
+	ItemId result = ItemId::Invalid;
+	auto it = mItemIds.find(name);
+	
+	if (it != mItemIds.end())
+		result = it->second;
 
 	return result;
 }
@@ -268,8 +304,8 @@ void Game::setHealth(int offset)
 	auto f0c0 = getF0c0();
 	auto base = pointerPath(mHealthBase, 0x50);
 
-	if (base) {
-		base = getValue<Pointer>(pointerPath(base, 0x230));
+	if (base && (base = pointerPath(base, 0x230))) {
+		base = getValue<Pointer>(base);
 		setValue(base + 0x58, offset);
 		//result = setHealth(f0c0, base, offset);
 	}
@@ -283,8 +319,8 @@ int Game::getHealth()
 	auto f0c0 = getF0c0();
 	auto base = pointerPath(mHealthBase, 0x50);
 
-	if (base) {
-		base = getValue<Pointer>(pointerPath(base, 0x230));
+	if (base && (base = pointerPath(base, 0x230))) {
+		base = getValue<Pointer>(base);
 		result = getValue<int>(base + 0x58);
 	}
 

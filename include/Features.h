@@ -2,6 +2,7 @@
 #define __FEATURES__
 #include <cstdint>
 #include <string_view>
+#include <unordered_map>
 #include <stdexcept>
 
 class Game
@@ -16,6 +17,8 @@ public:
 	~Game();
 	std::wstring_view getWeaponName(WeaponId id);
 	std::wstring_view getItemName(ItemId id);
+	WeaponId getWeaponId(std::wstring_view name);
+	ItemId getItemId(std::wstring_view name);
 	ItemData* getItemAt(int slot);
 	void setInventorySize(unsigned size);
 	void setWeaponMagazineSize(WeaponId id, int capacity);
@@ -37,6 +40,8 @@ private:
 	Timer* getTimer();
 	Pointer getF0c0();
 
+	std::unordered_map<std::wstring_view, WeaponId> mWeaponIds;
+	std::unordered_map<std::wstring_view, ItemId> mItemIds;
 	Pointer mInventorySizeBase; //re2.exe+70A17E0
 	Pointer mBB0Base; //re2.exe+70A5EA8
 	Pointer mGetNameFirstParameter; //re2.exe+7095BF0
