@@ -1,13 +1,17 @@
 #include "Memory.h"
-
 #include <Windows.h>
 #include <TlHelp32.h>
-
 #include <algorithm>
-#include <vector>
 #include <string>
-#include <iostream>
-#include <iomanip>
+#include <stdexcept>
+#include <thread>
+#include <string>
+#include "ThreadPool.h"
+#include <map>
+#include <tuple>
+
+#undef min
+#undef max
 
 namespace
 {
@@ -59,7 +63,7 @@ namespace
 		return true;
 	}
 
-	MODULEENTRY32 getModuleEntry(std::wstring_view moduleName)
+	MODULEENTRY32 getModuleEntry(std::wstring_view mModuleName)
 	{
 		MODULEENTRY32 modEntry;
 		modEntry.dwSize = sizeof(MODULEENTRY32);
@@ -68,7 +72,7 @@ namespace
 		if (hModuleSnapshot && Module32First(hModuleSnapshot, &modEntry))
 		{
 			do {
-				if (moduleName == modEntry.szModule) {
+				if (mModuleName == modEntry.szModule) {
 					CloseHandle(hModuleSnapshot);
 					return modEntry;
 				}
@@ -82,9 +86,9 @@ namespace
 	}
 }
 
-ModuleInfo getModuleInfo(std::wstring_view moduleName)
+ModuleInfo getModuleInfo(std::wstring_view mModuleName)
 {
-	auto entry = getModuleEntry(moduleName);
+	auto entry = getModuleEntry(mModuleName);
 	return { entry.modBaseAddr, entry.modBaseSize };
 }
 
@@ -111,7 +115,7 @@ Pointer patternScanHeap(std::string_view unformattedPattern)
 
 				VirtualProtect(element.lpData, element.cbData, oldProtect, &newProtect);
 			}
-			else std::cerr << "VirtualProtect failed at block " << element.lpData << std::endl;
+			//else std::cerr << "VirtualProtect failed at block " << element.lpData << std::endl;
 		}
 	}
 
@@ -156,7 +160,7 @@ Pointer patternScan(std::string_view unformattedPattern)
 	return 0;
 }
 
-Pointer patternScan(std::string_view unformattedPattern, std::wstring_view moduleName)
+Pointer patternScan(std::string_view unformattedPattern, std::wstring_view mModuleName)
 {
 	Pointer result = nullptr;
 	MODULEENTRY32 moduleEntry;
@@ -166,7 +170,7 @@ Pointer patternScan(std::string_view unformattedPattern, std::wstring_view modul
 		return result;
 
 	try {
-		moduleEntry = getModuleEntry(moduleName);
+		moduleEntry = getModuleEntry(mModuleName);
 	}
 	catch (const std::runtime_error&) {
 		return result;
@@ -188,15 +192,100 @@ Pointer patternScan(std::string_view unformattedPattern, std::wstring_view modul
 	return result;
 }
 
-Pointer pointerPath(Pointer baseAddress, const std::vector<std::uint64_t> &offsets)
-{
-	for (auto offset : offsets) {
-		memcpy(&baseAddress, baseAddress + offset, sizeof(Pointer));
-	}
-	return baseAddress;
-}
-
 Pointer getPointerFromImmediate(Pointer codeAddress)
 {
 	return codeAddress + static_cast<std::int64_t>(getValue<std::int32_t>(codeAddress)) + 4;
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class PatternScanner::Impl
+{
+public:
+	using ScanResult = std::tuple<std::string /*pattern*/, Pointer /*match location*/>;
+private:
+	std::wstring mModuleName;
+	ThreadPool mPool;
+	std::map<IdType, ScanResult> mPatterns;
+
+	void scanPattern(ScanResult &slot);
+public:
+	Impl(std::wstring_view mModuleName);
+	~Impl();
+
+	void addPattern(IdType id, std::string_view pattern);
+	Pointer getScanResult(IdType id);
+	void scan();
+	void waitForScan();
+};
+
+void PatternScanner::Impl::scanPattern(ScanResult &slot)
+{
+	if (!mModuleName.empty())
+		std::get<1>(slot) = patternScan(std::get<0>(slot), mModuleName);
+	else
+		std::get<1>(slot) = patternScan(std::get<0>(slot));
+}
+
+PatternScanner::Impl::Impl(std::wstring_view mModuleName)
+	:mModuleName(mModuleName),
+	mPool(std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 2)
+{}
+
+PatternScanner::Impl::~Impl()
+{
+	mPool.waitForTasks();
+}
+
+void PatternScanner::Impl::addPattern(IdType id, std::string_view pattern)
+{
+	mPatterns[id] = ScanResult(pattern, nullptr);
+}
+
+Pointer PatternScanner::Impl::getScanResult(IdType id)
+{
+	return std::get<1>(mPatterns.at(id));
+}
+
+void PatternScanner::Impl::scan()
+{
+	for (auto &scan : mPatterns)
+		mPool.addTask(std::bind(&Impl::scanPattern, this, std::ref(scan.second)));
+}
+
+void PatternScanner::Impl::waitForScan()
+{
+	mPool.waitForTasks();
+}
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+PatternScanner::PatternScanner(std::wstring_view moduleName)
+	:mThis(new Impl(moduleName))
+{}
+
+PatternScanner::~PatternScanner() = default;
+
+void PatternScanner::addPattern(IdType id, std::string_view pattern)
+{
+	mThis->addPattern(id, pattern);
+}
+
+Pointer PatternScanner::getScanResult(IdType id)
+{
+	return mThis->getScanResult(id);
+}
+
+void PatternScanner::scan()
+{
+	mThis->scan();
+}
+
+void PatternScanner::waitForScan()
+{
+	mThis->waitForScan();
 }

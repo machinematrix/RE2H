@@ -1,7 +1,7 @@
 #ifndef __MEMORY__
 #define __MEMORY__
 #include <string_view>
-#include <vector>
+#include <memory>
 
 using Pointer = char*;
 
@@ -11,10 +11,10 @@ struct ModuleInfo
 	std::uint32_t moduleSize;
 };
 
-ModuleInfo getModuleInfo(std::wstring_view moduleName);
+ModuleInfo getModuleInfo(std::wstring_view mModuleName);
 Pointer patternScanHeap(std::string_view unformattedPattern);
 Pointer patternScan(std::string_view unformattedPattern);
-Pointer patternScan(std::string_view unformattedPattern, std::wstring_view moduleName);
+Pointer patternScan(std::string_view unformattedPattern, std::wstring_view mModuleName);
 
 template<typename T>
 T getValue(Pointer address)
@@ -60,7 +60,20 @@ Pointer pointerPath(Pointer baseAddress, const T &offset, const Args& ...offsets
 		return nullptr;
 }
 
-Pointer pointerPath(Pointer baseAddress, const std::vector<std::uint64_t> &offsets);
 Pointer getPointerFromImmediate(Pointer codeAddress);
+
+class PatternScanner
+{
+	using IdType = int;
+	class Impl;
+	std::unique_ptr<Impl> mThis;
+public:
+	PatternScanner(std::wstring_view moduleName = L"");
+	~PatternScanner();
+	void addPattern(IdType id, std::string_view pattern);
+	Pointer getScanResult(IdType id);
+	void scan();
+	void waitForScan();
+};
 
 #endif
