@@ -282,6 +282,33 @@ void setHealth(Game &inv, std::string_view args)
 		cout << inv.getHealth() << endl;
 }
 
+void whereAmI(Game &game, std::string_view args)
+{
+	if (auto coords = game.getCoords())
+		cout << "X: " << coords->mX << " Y: " << coords->mY << " Z: " << coords->mZ << endl;
+	else
+		cout << "Nowhere" << endl;
+}
+
+void goTo(Game &game, std::string_view args)
+{
+	static std::regex coordinateRegex("[ ]?([+-]?[0-9]*[.]?[0-9]+) ([+-]?[0-9]*[.]?[0-9]+) ([+-]?[0-9]*[.]?[0-9]+)");
+	std::cmatch match;
+	
+	if (std::regex_match(args.data(), match, coordinateRegex))
+	{
+		if (auto *coords = game.getCoords()) {
+			coords->mX = std::stof(match[1]);
+			coords->mY = std::stof(match[2]);
+			coords->mZ = std::stof(match[3]);
+		}
+		else
+			cout << "Can't go there" << endl;
+	}
+	else
+		cout << "Usage: goto [x] [y] [z]" << endl;
+}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -308,6 +335,8 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		handler.addHandler("health", std::bind(setHealth, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("weaponId", std::bind(weaponId, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("itemId", std::bind(itemId, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("whereami", std::bind(whereAmI, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("goto", std::bind(goTo, std::ref(inv), std::placeholders::_1));
 
 		cout << ">> ";
 
@@ -322,12 +351,16 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 				try {
 					handler.callHandler(command, args);
 				}
-				catch (const CommandHandlerException & e) {
+				catch (const CommandHandlerException &e) {
 					cout << e.what() << endl;
 				}
 			}
 			cout << ">> ";
 		}
+	}
+	catch (const std::regex_error &e) {
+		std::string error("Regex error: ");
+		ErrorBox(consoleWindow, error + e.what());
 	}
 	catch (const std::runtime_error &e) {
 		ErrorBox(consoleWindow, e.what());
