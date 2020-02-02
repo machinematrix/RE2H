@@ -12,6 +12,7 @@ public:
 	enum class WeaponId : std::int32_t;
 	enum class ItemId : std::int32_t;
 	struct ItemData;
+	struct Coordinates;
 
 	Game();
 	~Game();
@@ -32,6 +33,7 @@ public:
 	void setSaveCount(unsigned count);
 	void setHealth(int offset);
 	int getHealth();
+	Coordinates* getCoords();
 
 private:
 	struct Microseconds;
@@ -53,6 +55,7 @@ private:
 	Pointer mTimerBase = nullptr; //re2.exe+709E120
 	Pointer mSaveCounterBase = nullptr; //re2.exe+700A8860
 	Pointer mHealthBase = nullptr; //re2.exe+70A7CD0 -> 0x50 -> 0x230
+	Pointer mPlayerBase = nullptr; //re2.exe+70973C8
 
 	//Game functions
 	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&) = nullptr; //returns 0 if it can't find the name
@@ -107,6 +110,11 @@ private:
 	std::uint64_t unknownInt17;
 	std::uint64_t unknownInt18;
 	std::uint64_t unknownInt19;
+};
+
+struct Game::Coordinates
+{
+	float mX, mY, mZ;
 };
 
 enum class Game::WeaponId

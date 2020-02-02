@@ -77,7 +77,8 @@ Game::Game()
 		{ &mItemCapacityFunction, "41 8D 40 F1  83 F8 12  77 39  48 98" },
 		{ &mTimerBase, "48 8B 05  ????????  48 85 C9  75 ??  48 85 C0  74 ??  88 48 53" },
 		{ &mSaveCounterBase, "48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 81 ????????  48 85 C0 75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B 0D ????????  44 8B C6" },
-		{ &mHealthBase, "48 8B 3D ????????  0F5B ??  0F5A ??  48 85 FF  75 ??  45 33 C0  8D 57 38  E8 ????????  E9 ????????  48 8B D7" }
+		{ &mHealthBase, "48 8B 3D ????????  0F5B ??  0F5A ??  48 85 FF  75 ??  45 33 C0  8D 57 38  E8 ????????  E9 ????????  48 8B D7" },
+		{ &mPlayerBase, "48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 49 18  48 85 C9  75 ??  8D 51 46  45 33 C0  48 8B CB  E8 ????????  48 8B CF  48 8B 43 50  48 39 78 18  0F85 ????????  48 85 C9  0F84 ????????  48 8D 54 24 20  E8 ????????  48 8B 43 50  48 39 78 18  0F85 ????????  0F28 44 24 20" }
 	};
 
 	for (unsigned i = 0; i < sizeof(members) / sizeof(decltype(members[i])); ++i)
@@ -98,15 +99,16 @@ Game::Game()
 	getArgumentForGetItemAt = reinterpret_cast<decltype(getArgumentForGetItemAt)>(getPointerFromImmediate(reinterpret_cast<Pointer>(getArgumentForGetItemAt) + 0x1));
 	getF0C0Ptr = reinterpret_cast<decltype(getF0C0Ptr)>(mF0C0ArgumentBase ? getPointerFromImmediate(mF0C0ArgumentBase + 0x7 + 0x1) : nullptr);
 
-	mInventorySizeBase = getPointerFromImmediate(mInventorySizeBase + 3);
-	mBB0Base = getPointerFromImmediate(mBB0Base + 3);
-	mGetNameFirstParameter = getPointerFromImmediate(mGetNameFirstParameter + 3);
-	mUnnamedArgumentPointer = getPointerFromImmediate(mUnnamedArgumentPointer + 3);
+	mInventorySizeBase = getPointerFromImmediate(mInventorySizeBase + 0x3);
+	mBB0Base = getPointerFromImmediate(mBB0Base + 0x3);
+	mGetNameFirstParameter = getPointerFromImmediate(mGetNameFirstParameter + 0x3);
+	mUnnamedArgumentPointer = getPointerFromImmediate(mUnnamedArgumentPointer + 0x3);
 	mF0C0ArgumentBase = getPointerFromImmediate(mF0C0ArgumentBase + 0x3);
 	mWeaponInfoTableBase = getPointerFromImmediate(mWeaponInfoTableBase + 0x3);
-	mTimerBase = getPointerFromImmediate(mTimerBase + 3);
-	mSaveCounterBase = getPointerFromImmediate(mSaveCounterBase + 3);
-	mHealthBase = getPointerFromImmediate(mHealthBase + 3);
+	mTimerBase = getPointerFromImmediate(mTimerBase + 0x3);
+	mSaveCounterBase = getPointerFromImmediate(mSaveCounterBase + 0x3);
+	mHealthBase = getPointerFromImmediate(mHealthBase + 0x3);
+	mPlayerBase = getPointerFromImmediate(mPlayerBase + 0x3);
 
 	for (unsigned i = 0; i <= static_cast<unsigned>(Game::ItemId::StuffedDoll); ++i)
 	{
@@ -303,8 +305,22 @@ void Game::setHealth(int offset)
 	auto f0c0 = getF0c0();
 	auto base = pointerPath(mHealthBase, 0x50);
 
+	#ifndef NDEBUG
+	cout << (void*)base << endl;
+	#endif
+
 	if (base && (base = pointerPath(base, 0x230))) {
+
+		#ifndef NDEBUG
+		cout << (void*)base << endl;
+		#endif
+
 		base = getValue<Pointer>(base);
+
+		#ifndef NDEBUG
+		cout << (void*)base << endl;
+		#endif
+
 		setValue(base + 0x58, offset);
 		//result = setHealth(f0c0, base, offset);
 	}
@@ -324,6 +340,11 @@ int Game::getHealth()
 	}
 
 	return result;
+}
+
+Game::Coordinates* Game::getCoords()
+{
+	return reinterpret_cast<Coordinates*>(pointerPath(mPlayerBase, 0x18, 0x30));
 }
 
 Game::Timer* Game::getTimer()
