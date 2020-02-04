@@ -78,7 +78,9 @@ Game::Game()
 		{ &mTimerBase, "48 8B 05  ????????  48 85 C9  75 ??  48 85 C0  74 ??  88 48 53" },
 		{ &mSaveCounterBase, "48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 81 ????????  48 85 C0 75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B 0D ????????  44 8B C6" },
 		{ &mHealthBase, "48 8B 3D ????????  0F5B ??  0F5A ??  48 85 FF  75 ??  45 33 C0  8D 57 38  E8 ????????  E9 ????????  48 8B D7" },
-		{ &mPlayerBase, "48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 49 18  48 85 C9  75 ??  8D 51 46  45 33 C0  48 8B CB  E8 ????????  48 8B CF  48 8B 43 50  48 39 78 18  0F85 ????????  48 85 C9  0F84 ????????  48 8D 54 24 20  E8 ????????  48 8B 43 50  48 39 78 18  0F85 ????????  0F28 44 24 20" }
+		{ &mPlayerBase, "48 8B 0D ????????  48 85 C9  0F84 ????????  48 8B 49 18  48 85 C9  75 ??  8D 51 46  45 33 C0  48 8B CB  E8 ????????  48 8B CF  48 8B 43 50  48 39 78 18  0F85 ????????  48 85 C9  0F84 ????????  48 8D 54 24 20  E8 ????????  48 8B 43 50  48 39 78 18  0F85 ????????  0F28 44 24 20" },
+		{ &mClippingFunction, "40 55  53  56  57  41 56  48 8D 6C 24 B0  48 81 EC ????????  0F29 B4 24" },
+		{ &mCollisionCheckFunction, "74 ??  8B 41 54  D1 E8" }
 	};
 
 	for (unsigned i = 0; i < sizeof(members) / sizeof(decltype(members[i])); ++i)
@@ -139,6 +141,7 @@ Game::~Game()
 {
 	toggleItemCapacityCheck(true);
 	setUniversalItemCapacity(0);
+	toggleClipping(true);
 }
 
 std::wstring_view Game::getWeaponName(WeaponId id)
@@ -205,8 +208,7 @@ Game::ItemData* Game::getItemAt(int slot)
 
 void Game::setInventorySize(unsigned size)
 {
-	if (Pointer slotCountPtr = pointerPath(mInventorySizeBase, 0x50))
-		if (slotCountPtr = pointerPath(slotCountPtr, 0x90))
+	if (Pointer slotCountPtr = pointerPath(mInventorySizeBase, 0x50, 0x90))
 			setValue(slotCountPtr, size);
 }
 
@@ -224,6 +226,34 @@ void Game::setWeaponMagazineSize(WeaponId id, int capacity)
 		}
 	}
 }
+
+void Game::toggleInfiniteMagazine(WeaponId id, bool toggle)
+{
+	Pointer weaponInfoTable = pointerPath(mWeaponInfoTableBase, 0x78, 0x30, 0);
+	int tableSize = getValue<int>(weaponInfoTable + 0x1C);
+	weaponInfoTable += 0x20;
+
+	for (std::int64_t i = 0; i < tableSize; ++i)
+	{
+		if (getValue<WeaponId>(pointerPath(weaponInfoTable + i * 8, 0x10)) == id) {
+			setValue(pointerPath(weaponInfoTable + i * 8, 0x18, 0x20, 0x18), toggle ? 257 : 1);
+			break;
+		}
+	}
+}
+
+//std::vector<Pointer> Game::getWeaponInfoTableEntries()
+//{
+//	std::vector<Pointer> result;
+//	Pointer weaponInfoTable = pointerPath(mWeaponInfoTableBase, 0x78, 0x30, 0);
+//	int tableSize = getValue<int>(weaponInfoTable + 0x1C);
+//	weaponInfoTable += 0x20;
+//
+//	for (std::int64_t i = 0; i < tableSize; ++i)
+//		result.push_back(getValue<Pointer>(weaponInfoTable + i * 8));
+//
+//	return result;
+//}
 
 void Game::toggleItemCapacityCheck(bool toggle)
 {
@@ -303,24 +333,8 @@ void Game::setHealth(int offset)
 {
 	//int result = -1;
 	auto f0c0 = getF0c0();
-	auto base = pointerPath(mHealthBase, 0x50);
 
-	#ifndef NDEBUG
-	cout << (void*)base << endl;
-	#endif
-
-	if (base && (base = pointerPath(base, 0x230))) {
-
-		#ifndef NDEBUG
-		cout << (void*)base << endl;
-		#endif
-
-		base = getValue<Pointer>(base);
-
-		#ifndef NDEBUG
-		cout << (void*)base << endl;
-		#endif
-
+	if (auto base = pointerPath(mHealthBase, 0x50, 0x230, 0)) {
 		setValue(base + 0x58, offset);
 		//result = setHealth(f0c0, base, offset);
 	}
@@ -332,12 +346,9 @@ int Game::getHealth()
 {
 	int result = -1;
 	auto f0c0 = getF0c0();
-	auto base = pointerPath(mHealthBase, 0x50);
 
-	if (base && (base = pointerPath(base, 0x230))) {
-		base = getValue<Pointer>(base);
+	if (auto base = pointerPath(mHealthBase, 0x50, 0x230, 0))
 		result = getValue<int>(base + 0x58);
-	}
 
 	return result;
 }
@@ -345,6 +356,20 @@ int Game::getHealth()
 Game::Coordinates* Game::getCoords()
 {
 	return reinterpret_cast<Coordinates*>(pointerPath(mPlayerBase, 0x18, 0x30));
+}
+
+void Game::toggleClipping(bool toggle)
+{
+	DWORD protect, protect2;
+	if (VirtualProtect(mClippingFunction, 1, PAGE_EXECUTE_READWRITE, &protect))
+	{
+		if (VirtualProtect(mCollisionCheckFunction, 1, PAGE_EXECUTE_READWRITE, &protect2)) {
+			*mCollisionCheckFunction = toggle ? 0x74 : 0xEB;
+			*mClippingFunction = toggle ? 0x40 : 0xC3;
+			VirtualProtect(mCollisionCheckFunction, 1, protect2, &protect2);
+		}
+		VirtualProtect(mClippingFunction, 1, protect, &protect);
+	}
 }
 
 Game::Timer* Game::getTimer()

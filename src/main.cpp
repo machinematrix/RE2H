@@ -26,6 +26,7 @@ namespace
 {
 	std::regex singleDigitRegex("[ ]?([[:digit:]]+)");
 	std::regex stringRegex("[ ]?(.+)");
+	std::regex booleanRegex("[ ]?(true|false|0|1)");
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved)
@@ -244,12 +245,24 @@ void setWeaponCapacity(Game &inv, std::string_view args)
 		cout << "Usage: weaponCapacity [id] [value]" << endl;
 }
 
-void toggleCapacityCheck(Game &inv, std::string_view args)
+void setUnlimitedMagazine(Game &game, std::string_view args)
 {
-	static std::regex rgx("[ ]?(true|false|0|1)");
+	static std::regex rgx("[ ]?([[:digit:]]+) (true|false|0|1)");
 	std::cmatch match;
 
-	if (std::regex_match(args.data(), match, rgx))
+	if (std::regex_match(args.data(), match, rgx)) {
+		auto toggle = match[2];
+		game.toggleInfiniteMagazine(static_cast<Game::WeaponId>(std::stoi(match[1])), toggle == "true" || toggle == "1" ? true : false);
+	}
+	else
+		cout << "Usage: unlimitedMag [Weapon ID] [true|false]" << endl;
+}
+
+void toggleCapacityCheck(Game &inv, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, booleanRegex))
 	{
 		if (match[1] == "true" || match[1] == "1")
 			inv.toggleItemCapacityCheck(true);
@@ -309,6 +322,29 @@ void goTo(Game &game, std::string_view args)
 		cout << "Usage: goto [x] [y] [z]" << endl;
 }
 
+void clipping(Game &game, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, booleanRegex))
+	{
+		if (match[1] == "true" || match[1] == "1")
+			game.toggleClipping(true);
+		else
+			game.toggleClipping(false);
+	}
+	else
+		cout << "Usage: clipping [true|false|0|1]" << endl;
+}
+
+//void tableEntries(Game &game, std::string_view args)
+//{
+//	for (auto entry : game.getWeaponInfoTableEntries())
+//	{
+//		wcout << (void*)entry << L": " << game.getWeaponName(getValue<Game::WeaponId>(entry + 0x10)) << endl;
+//	}
+//}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -330,6 +366,7 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		handler.addHandler("setSaveCounter", std::bind(setSaveCounter, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("unlimitedMagazine", std::bind(setUnlimitedMagazine, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("itemCapacity", std::bind(setItemCapacity, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("health", std::bind(setHealth, std::ref(inv), std::placeholders::_1));
@@ -337,6 +374,8 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		handler.addHandler("itemId", std::bind(itemId, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("whereami", std::bind(whereAmI, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("goto", std::bind(goTo, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("clipping", std::bind(clipping, std::ref(inv), std::placeholders::_1));
+		//handler.addHandler("entries", std::bind(tableEntries, std::ref(inv), std::placeholders::_1));
 
 		cout << ">> ";
 

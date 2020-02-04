@@ -23,9 +23,10 @@ public:
 	ItemData* getItemAt(int slot);
 	void setInventorySize(unsigned size);
 	void setWeaponMagazineSize(WeaponId id, int capacity);
+	void toggleInfiniteMagazine(WeaponId, bool);
+	//std::vector<Pointer> getWeaponInfoTableEntries();
 	void toggleItemCapacityCheck(bool toggle);
 	void setUniversalItemCapacity(int);
-
 	void setGeneralTimer(unsigned microseconds, unsigned overflows);
 	void setInventoryTimer(unsigned microseconds, unsigned overflows);
 	void setPauseTimer(unsigned microseconds, unsigned overflows);
@@ -34,6 +35,7 @@ public:
 	void setHealth(int offset);
 	int getHealth();
 	Coordinates* getCoords();
+	void toggleClipping(bool);
 
 private:
 	struct Microseconds;
@@ -56,6 +58,8 @@ private:
 	Pointer mSaveCounterBase = nullptr; //re2.exe+700A8860
 	Pointer mHealthBase = nullptr; //re2.exe+70A7CD0 -> 0x50 -> 0x230
 	Pointer mPlayerBase = nullptr; //re2.exe+70973C8
+	Pointer mClippingFunction = nullptr; //re2.exe+1E7AC10
+	Pointer mCollisionCheckFunction = nullptr; //re2.exe+22BA674
 
 	//Game functions
 	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&) = nullptr; //returns 0 if it can't find the name
