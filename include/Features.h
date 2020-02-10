@@ -9,10 +9,12 @@ class Game
 {
 	using Pointer = char*;
 public:
+	enum class DamageType : std::int32_t;
 	enum class WeaponId : std::int32_t;
 	enum class ItemId : std::int32_t;
 	struct ItemData;
 	struct Coordinates;
+	struct DamageInfo;
 
 	Game();
 	~Game();
@@ -23,19 +25,27 @@ public:
 	ItemData* getItemAt(int slot);
 	void setInventorySize(unsigned size);
 	void setWeaponMagazineSize(WeaponId id, int capacity);
-	void toggleInfiniteMagazine(WeaponId, bool);
-	//std::vector<Pointer> getWeaponInfoTableEntries();
+	//Modifies the memory that makes the LE5 and original Samurai Edge in story mode, and the Broom Hc in No Way Out, have unlimited ammo. Doesn't work on most weapons.
+	void toggleUnlimitedMagazine(WeaponId, bool);
+	void toggleUnlimitedAmmo(WeaponId, bool);
+	std::vector<Pointer> getWeaponInfoTableEntries();
 	void toggleItemCapacityCheck(bool toggle);
 	void setUniversalItemCapacity(int);
-	void setGeneralTimer(unsigned microseconds, unsigned overflows);
-	void setInventoryTimer(unsigned microseconds, unsigned overflows);
-	void setPauseTimer(unsigned microseconds, unsigned overflows);
+	//Time spent in the game in general?
+	void setGeneralTimer(unsigned mMicroseconds, unsigned mOverflows);
+	//Time spent in inventory/map/documents
+	void setInventoryTimer(unsigned mMicroseconds, unsigned mOverflows);
+	//Time spent in pause
+	void setPauseTimer(unsigned mMicroseconds, unsigned mOverflows);
 	void setPlayedTime(unsigned hours, unsigned minutes, unsigned seconds);
 	void setSaveCount(unsigned count);
 	void setHealth(int offset);
 	int getHealth();
+	void setMaxHealth(unsigned value);
+	unsigned getMaxHealth();
 	Coordinates* getCoords();
 	void toggleClipping(bool);
+	DamageInfo* getDamageInfo(DamageType damageType, int subDamageType);
 
 private:
 	struct Microseconds;
@@ -60,15 +70,23 @@ private:
 	Pointer mPlayerBase = nullptr; //re2.exe+70973C8
 	Pointer mClippingFunction = nullptr; //re2.exe+1E7AC10
 	Pointer mCollisionCheckFunction = nullptr; //re2.exe+22BA674
+	Pointer mSmoothCollision = nullptr; //re2.exe+22CA2D6
+	Pointer mUnlimitedAmmoIndexBase = nullptr; //re2.exe+7095DC0
+	Pointer mUnknownStaticObject = nullptr; //re2.exe+709E160
+	Pointer mUnknownStaticObject2 = nullptr; //re2.exe+7098B98
+	//Pointer mGetRSIArgument = nullptr; //re2.exe+7049820
 
 	//Game functions
-	std::int64_t	(*getWeaponTextHash)		(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&) = nullptr; //returns 0 if it can't find the name
-	TextHash&		(*getItemTextHash)			(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId) = nullptr; //returns a pointer to the first argument
-	const wchar_t*	(*getName)					(void*, TextHash&) = nullptr;
-	void*			(*getArgument)				(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/) = nullptr;
-	void*			(*getArgumentForGetItemAt)	(void* /*F0C0*/, void* /*return value from getArgument*/) = nullptr;
-	ItemData*		(*getItemAtSlot)			(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/) = nullptr;
-	void*			(*getF0C0Ptr)				(void* /* *mF0C0Base */, std::uint32_t /*~0u*/) = nullptr;
+	std::int64_t	(*mGetWeaponTextHashFunction)				(void* /*f0c0*/, void* /*bb0*/, WeaponId, TextHash&) = nullptr; //returns 0 if it can't find the name
+	TextHash&		(*mGetItemTextHashFunction)					(TextHash&, void* /*f0c0*/, void* /*bb0 + 0*/, ItemId) = nullptr; //returns a pointer to the first argument
+	const wchar_t*	(*mGetNameFunction)							(void*, TextHash&) = nullptr;
+	void*			(*mGetArgumentFunction)						(void* /*F0C0*/, void* /*unnamedArgument + 0x50*/) = nullptr;
+	void*			(*mGetArgumentForGetItemAtFunction)			(void* /*F0C0*/, void* /*return value from getArgument*/) = nullptr;
+	ItemData*		(*mGetItemAtSlotFunction)					(void* /*F0C0*/, void* /*result from function above + 0xA8*/, std::int64_t /*slotIndex*/) = nullptr;
+	void*			(*mGetF0C0PtrFunction)						(void* /* *mF0C0Base */, std::uint32_t /*~0u*/) = nullptr;
+	void*			(*mUnlimitedAmmoStructGetterFunction)		(void*, TextHash&) = nullptr;
+	//void*			(*mGetRSIFunction)							(void* /*f0c0*/, void* /*arg*/, int /*0*/) = nullptr;
+	void*			(*mGetDamageInfoTableBaseFunction)			(void* /*f0c0*/, void* /*mUnknownStaticObject -> 0x70*/, void* /*rsi -> 0x50*/) = nullptr;
 	//int (*damagePlayer)(void* /*F0C0*/, void*, int);
 };
 
@@ -121,7 +139,48 @@ struct Game::Coordinates
 	float mX, mY, mZ;
 };
 
-enum class Game::WeaponId
+struct Game::DamageInfo
+{
+	char padding[0x10];
+public:
+	DamageType mDamageTypeID;
+	std::int32_t mSubDamageTypeID;
+private:
+	char padding2[0x8];
+public:
+	std::int32_t mBaseDamage;
+private:
+	std::int32_t flag;
+	std::int32_t relevantInt;
+	char padding4[0x4];
+public:
+	std::int32_t mLimbDamage; //Higher values reduces the amount of shots required to tear off limbs
+private:
+	char padding5[0x4];
+public:
+	float mForce;
+private:
+	char padding6[0x4];
+};
+
+enum class Game::DamageType : std::int32_t
+{
+	Burn = -1, //sub 1: fire, 2: acid, 3: flamethower fire
+	Handgun,
+	Shotgun,
+	SubMachineGun,
+	Magnum,
+	GrenadeLauncher, //sub 0: base damage for both acid and fire, 1: acid bonus, 2: fire bonus, lasts longer
+	Shock, //sub 0: initial, 1: burn, 2: discharge
+	Flamethrower,
+	Rocket, //sub 0: no base damage, 1: base damage
+	Minigun,
+	Knife,
+	Grenade,
+	FlashGrenade,
+};
+
+enum class Game::WeaponId : std::int32_t
 {
 	Invalid = -1,
 	Matilda = 0x01,
@@ -153,7 +212,7 @@ enum class Game::WeaponId
 	Minigun2 = 0xFC
 };
 
-enum class Game::ItemId
+enum class Game::ItemId : std::int32_t
 {
 	Invalid = 0,
 	FirstAidSpray = 0x01,

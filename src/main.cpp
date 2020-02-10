@@ -4,10 +4,12 @@
 #include <string>
 #include <regex>
 #include <iostream>
+#include <fstream>
 #include <iomanip>
 #include "Utility.h"
 #include "Features.h"
 #include "CommandHandler.h"
+//#include "Memory.h"
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
@@ -151,7 +153,7 @@ void getItemAt(Game &inv, std::string_view args)
 				wcout << endl;
 			}
 			else if (item->itemId != Game::ItemId::Invalid) { //if it's an item
-				wcout << inv.getItemName(item->itemId) << " quantity: " << item->ammo << endl;
+				wcout << item << ": " << inv.getItemName(item->itemId) << " quantity: " << item->ammo << endl;
 			}
 		}
 	}
@@ -252,11 +254,24 @@ void setUnlimitedMagazine(Game &game, std::string_view args)
 
 	if (std::regex_match(args.data(), match, rgx)) {
 		auto toggle = match[2];
-		game.toggleInfiniteMagazine(static_cast<Game::WeaponId>(std::stoi(match[1])), toggle == "true" || toggle == "1" ? true : false);
+		game.toggleUnlimitedMagazine(static_cast<Game::WeaponId>(std::stoi(match[1])), toggle == "true" || toggle == "1" ? true : false);
 	}
 	else
 		cout << "Usage: unlimitedMag [Weapon ID] [true|false]" << endl;
 }
+
+//void unlimitedAmmo(Game &game, std::string_view args)
+//{
+//	static std::regex rgx("[ ]?([[:digit:]]+) (true|false|0|1)");
+//	std::cmatch match;
+//
+//	if (std::regex_match(args.data(), match, rgx)) {
+//		auto toggle = match[2];
+//		game.toggleUnlimitedAmmo(static_cast<Game::WeaponId>(std::stoi(match[1])), toggle == "true" || toggle == "1" ? true : false);
+//	}
+//	else
+//		cout << "Usage: unlimitedAmmo [Weapon ID] [true|false|0|1]" << endl;
+//}
 
 void toggleCapacityCheck(Game &inv, std::string_view args)
 {
@@ -285,7 +300,7 @@ void setItemCapacity(Game &inv, std::string_view args)
 		cout << "Usage: itemCapacity [value]\nif value is less than or equal to zero, default capacities are used" << endl;
 }
 
-void setHealth(Game &inv, std::string_view args)
+void health(Game &inv, std::string_view args)
 {
 	std::cmatch match;
 
@@ -293,6 +308,16 @@ void setHealth(Game &inv, std::string_view args)
 		inv.setHealth(std::stoi(match[1]));
 	else
 		cout << inv.getHealth() << endl;
+}
+
+void maxHealth(Game &game, std::string_view args)
+{
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, singleDigitRegex))
+		game.setMaxHealth(std::stoul(match[1]));
+	else
+		cout << game.getMaxHealth() << endl;
 }
 
 void whereAmI(Game &game, std::string_view args)
@@ -345,6 +370,45 @@ void clipping(Game &game, std::string_view args)
 //	}
 //}
 
+void getDamageInfo(Game &game, std::string_view args)
+{
+	static std::regex rgx("[ ]?([[:digit:]]+) ([[:digit:]]+)");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+	{
+		if (auto info = game.getDamageInfo(static_cast<Game::DamageType>(std::stoi(match[1])), std::stoi(match[2])))
+		{
+			cout << "Base Damage: " << info->mBaseDamage << "\nLimb Damage: " << info->mLimbDamage << "\nForce: " << info->mForce << endl;
+		}
+	}
+	else
+		cout << "Usage: getDamageInfo [damage type] [sub damage type]" << endl;
+}
+
+void setDamageInfo(Game &game, std::string_view args)
+{
+	static std::regex rgx("[ ]?([[:digit:]]+) ([[:digit:]]+)(?:[ ]baseDamage:([[:digit:]]+)*)?(?:[ ]limbDamage:([[:digit:]]+)*)?(?:[ ]force:([[:digit:]]+)*)?");
+	std::cmatch match;
+
+	if (std::regex_match(args.data(), match, rgx))
+	{
+		if (auto info = game.getDamageInfo(static_cast<Game::DamageType>(std::stoi(match[1])), std::stoi(match[2])))
+		{
+			if (match[3].matched)
+				info->mBaseDamage = std::stoi(match[3]);
+
+			if (match[4].matched)
+				info->mLimbDamage = std::stoi(match[4]);
+
+			if (match[5].matched)
+				info->mForce = std::stof(match[5]);
+		}
+	}
+	else
+		cout << "Usage: setDamageInfo [damage type] [sub damage type] baseDamage:[value] limbDamage:[value] force:[value]" << endl;
+}
+
 DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 {
 	AllocConsole();
@@ -353,6 +417,7 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 
 	try {
 		std::string command, args;
+		std::ifstream commandFile("commands.txt");
 		CommandHandler handler;
 		int firstChar;
 		Game inv;
@@ -367,15 +432,36 @@ DWORD WINAPI ConsoleMain(LPVOID lpParameter)
 		handler.addHandler("inventorySize", std::bind(setInventorySize, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("weaponCapacity", std::bind(setWeaponCapacity, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("unlimitedMagazine", std::bind(setUnlimitedMagazine, std::ref(inv), std::placeholders::_1));
+		//handler.addHandler("unlimitedAmmo", std::bind(unlimitedAmmo, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("capacityCheck", std::bind(toggleCapacityCheck, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("itemCapacity", std::bind(setItemCapacity, std::ref(inv), std::placeholders::_1));
-		handler.addHandler("health", std::bind(setHealth, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("health", std::bind(health, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("maxHealth", std::bind(maxHealth, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("weaponId", std::bind(weaponId, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("itemId", std::bind(itemId, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("whereami", std::bind(whereAmI, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("goto", std::bind(goTo, std::ref(inv), std::placeholders::_1));
 		handler.addHandler("clipping", std::bind(clipping, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("getDamageInfo", std::bind(getDamageInfo, std::ref(inv), std::placeholders::_1));
+		handler.addHandler("setDamageInfo", std::bind(setDamageInfo, std::ref(inv), std::placeholders::_1));
 		//handler.addHandler("entries", std::bind(tableEntries, std::ref(inv), std::placeholders::_1));
+
+		if (commandFile.is_open())
+		{
+			while (commandFile >> command)
+			{
+				std::getline(commandFile, args);
+
+				try {
+					handler.callHandler(command, args);
+				}
+				catch (const CommandHandlerException &e) {
+					cout << e.what() << endl;
+				}
+			}
+			commandFile.close();
+		}
+
 
 		cout << ">> ";
 
