@@ -442,7 +442,7 @@ Game::DamageInfo* Game::getDamageInfo(DamageType damageType, int subDamageType)
 		{
 			Pointer tableBase = reinterpret_cast<Pointer>(mGetDamageInfoTableBaseFunction(f0c0, secondArg, thirdArg));
 
-			if (tableBase && (tableBase = pointerPath(tableBase + 0x2B0, 0x78, 0x10, 0xB8, 0x30, 0x70, 0)))
+			if (tableBase && (tableBase = pointerPath(tableBase + 0x2B0, 0x78, 0x10, 0xB8, 0x38, 0x30, 0x10, 0)))
 			{
 				DamageInfo *info = getValue<DamageInfo*>(tableBase + 0x20);
 
