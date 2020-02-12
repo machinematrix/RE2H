@@ -73,7 +73,7 @@ private:
 	Pointer mSmoothCollision = nullptr; //re2.exe+22CA2D6
 	Pointer mUnlimitedAmmoIndexBase = nullptr; //re2.exe+7095DC0
 	Pointer mUnknownStaticObject = nullptr; //re2.exe+709E160
-	Pointer mUnknownStaticObject2 = nullptr; //re2.exe+7098B98
+	Pointer mUnknownStaticObject2 = nullptr; //re2.exe+7098B98 re2.exe+70960E8
 	//Pointer mGetRSIArgument = nullptr; //re2.exe+7049820
 
 	//Game functions

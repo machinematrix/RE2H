@@ -85,7 +85,8 @@ Game::Game()
 		{ reinterpret_cast<Pointer*>(&mUnlimitedAmmoStructGetterFunction), "E8 ????????  48 8B 4B 50  48 8B F8  48 83 79 18 00  75 ??  48 85 C0  74 ??  48 8B C8  E8 ????????  48 8B 4B 50  48 83 79 18 00  75 ??  83 F8 02  75 ??  4C 8B C7  49 8B D4  48 8B CB" },
 		{ &mSmoothCollision, "89 81 107D0000  48 83 C1 10  49 C1 E0 06" },
 		{ &mUnknownStaticObject, "48 8B 2D ????????  4D 85 C0  75 ?? BA 46000000  48 8B CB  E8 ????????  4C 8B C7" },
-		{ &mUnknownStaticObject2, "48 8B 15 ????????  0F5A C0  0F29 BC 24 D0000000" },
+		//{ &mUnknownStaticObject2, "48 8B 15 ????????  0F5A C0  0F29 BC 24 D0000000" },
+		{ &mUnknownStaticObject2, "48 8B 05 ????????  48 85 C0  75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B F8  E9 4C030000" },
 		//{ &mGetRSIArgument, "48 8B 15 ????????  45 33 C0  48 8B CB  E8 ????????  48 8B 4B 50  48 8B F0  4C 39 69 18  0F85 ????????  48 8B CB" },
 		{ reinterpret_cast<Pointer*>(&mGetDamageInfoTableBaseFunction), "E8 ????????  4C 8B F0  48 8B 43 50  4C 39 68 18  0F85 ????????  45 33 C0  49 8B D6  48 8B CB  E8 ????????  0FB6 D0" }
 	};
@@ -436,7 +437,8 @@ Game::DamageInfo* Game::getDamageInfo(DamageType damageType, int subDamageType)
 	if (f0c0)
 	{
 		Pointer secondArg = pointerPath(mUnknownStaticObject, 0x70, 0x0);
-		Pointer thirdArg = pointerPath(mUnknownStaticObject2, 0x50, 0x50, 0x18, 0x10, 0);
+		//Pointer thirdArg = pointerPath(mUnknownStaticObject2, 0x50, 0x50, 0x18, 0x10, 0);
+		Pointer thirdArg = pointerPath(mUnknownStaticObject2, 0x40, 0x10, 0);
 
 		if (secondArg && thirdArg)
 		{
