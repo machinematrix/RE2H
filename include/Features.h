@@ -61,7 +61,7 @@ private:
 	Pointer mGetNameFirstParameter = nullptr; //re2.exe+7095BF0
 	Pointer mWeaponInfoTableBase = nullptr; //re2.exe+709C2F0
 	Pointer mCapacityCheckOpcode = nullptr;
-	Pointer mF0C0ArgumentBase = nullptr; //re2.exe+7095E08 function that returns it and argument to function can be found from here
+	Pointer mCriticalSectionObjectBase = nullptr; //re2.exe+7095E08 function that returns it and argument to function can be found from here
 	Pointer mUnnamedArgumentPointer = nullptr; //re2.exe+709B5E0
 	Pointer mItemCapacityFunction = nullptr;
 	Pointer mTimerBase = nullptr; //re2.exe+709E120
@@ -73,7 +73,7 @@ private:
 	Pointer mSmoothCollision = nullptr; //re2.exe+22CA2D6
 	Pointer mUnlimitedAmmoIndexBase = nullptr; //re2.exe+7095DC0
 	Pointer mUnknownStaticObject = nullptr; //re2.exe+709E160
-	Pointer mUnknownStaticObject2 = nullptr; //re2.exe+7098B98 re2.exe+70960E8
+	Pointer mEnemyListBase = nullptr; //re2.exe+7098B98 re2.exe+70960E8
 	//Pointer mGetRSIArgument = nullptr; //re2.exe+7049820
 
 	//Game functions

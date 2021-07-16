@@ -1,6 +1,6 @@
 #include "Features.h"
-#include "Memory.h"
 #include <windows.h>
+#include "Memory.h"
 
 #ifndef NDEBUG
 #include <iostream>
@@ -71,7 +71,7 @@ Game::Game()
 		{ reinterpret_cast<Pointer*>(&mGetArgumentFunction), "E8 ????????  48 8B 4B 50  48 83 79 18 00  0F85 ????????  48 8B CB  48 85 C0  75 ??  45 33 C0  41 8D 50 38  48 8B 5C 24 30  48 8B 74 24 38  48 83 C4 20  5F  E9 ????????  48 8B D0  E8 ????????  48 8B 4B 50  48 8B F8  48 83 79 18 00  0F85 ????????  45 33 C0  48 8B D0" },
 		{ reinterpret_cast<Pointer*>(&mGetArgumentForGetItemAtFunction), "E8 ????????  48 8B 4B 50  48 8B F8  48 83 79 18 00  0F85 ????????  45 33 C0  48 8B D0  48 8B CB  E8 ????????  48 8B 4B 50  0FB6 C0  48 8B 51 18  48 85 D2  74 04  32 C0  EB 05  85 C0  0F95 C0  48 85 D2  75 78  84 C0  74 74  83 BE 74050000 01  74 6B  48 8B CB  48 85 FF  74 8A  48 8B D7  E8 ????????  0FB6 C8  48 8B 43 50  48 83 78 18 00  75 4D  85 C9  74 49  41 B0 01  48 8B D6  48 8B CB  E8 ????????  48 8B 43 50  48 83 78 18 00  75 30  48 8B 05 ????????  48 85 C0  75 1D  45 33 C0  8D 50 38  48 8B CB  48 8B 5C 24 30  48 8B 74 24 38  48 83 C4 20  5F  E9 ????????  C7 40 68 06000000  48 8B 5C 24 30  48 8B 74 24 38  48 83 C4 20  5F  C3" },
 		{ reinterpret_cast<Pointer*>(&mGetItemAtSlotFunction), "48 89 5C 24 18  48 89 7C 24 20  41 56  48 83 EC 20  48 8B 41 50  45 0FB6 F1  41 8B F8  48 8B D9  48 83 78 18 00  74 13  33 C0  48 8B 5C 24 40  48 8B 7C 24 48  48 83 C4 20  41 5E  C3" },
-		{ &mF0C0ArgumentBase, "48 8B 0D ????????  E8 ????????  48 8B D8  83 78 78 00  75 ??  48 8B C8  E8 ????????  FF 43 78  48 8B 05  ????????" },
+		{ &mCriticalSectionObjectBase, "48 8B 0D ????????  E8 ????????  48 8B D8  83 78 78 00  75 ??  48 8B C8  E8 ????????  FF 43 78  48 8B 05  ????????" },
 		{ &mWeaponInfoTableBase, "4C 8B 05 ????????  48 85 C9  74 ?? 48 8B 41 10" },
 		{ &mCapacityCheckOpcode, "0F4C D8  48 85 F6" },
 		{ &mItemCapacityFunction, "41 8D 40 F1  83 F8 12  77 39  48 98" },
@@ -86,7 +86,7 @@ Game::Game()
 		{ &mSmoothCollision, "89 81 107D0000  48 83 C1 10  49 C1 E0 06" },
 		{ &mUnknownStaticObject, "48 8B 2D ????????  4D 85 C0  75 ?? BA 46000000  48 8B CB  E8 ????????  4C 8B C7" },
 		//{ &mUnknownStaticObject2, "48 8B 15 ????????  0F5A C0  0F29 BC 24 D0000000" },
-		{ &mUnknownStaticObject2, "48 8B 05 ????????  48 85 C0  75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B F8  E9 ????????" }, //4C030000
+		{ &mEnemyListBase, "48 8B 05 ????????  48 85 C0  75 ??  45 33 C0  8D 50 38  48 8B CB  E8 ????????  48 8B F8  E9 ????????" }, //4C030000
 		//{ &mGetRSIArgument, "48 8B 15 ????????  45 33 C0  48 8B CB  E8 ????????  48 8B 4B 50  48 8B F0  4C 39 69 18  0F85 ????????  48 8B CB" },
 		{ reinterpret_cast<Pointer*>(&mGetDamageInfoTableBaseFunction), "E8 ????????  4C 8B F0  48 8B 43 50  4C 39 68 18  0F85 ????????  45 33 C0  49 8B D6  48 8B CB  E8 ????????  0FB6 D0" }
 	};
@@ -107,7 +107,7 @@ Game::Game()
 	mGetNameFunction = reinterpret_cast<decltype(mGetNameFunction)>(getPointerFromImmediate(reinterpret_cast<Pointer>(mGetNameFunction) + 0x1));
 	mGetArgumentFunction = reinterpret_cast<decltype(mGetArgumentFunction)>(getPointerFromImmediate(reinterpret_cast<Pointer>(mGetArgumentFunction) + 0x1));
 	mGetArgumentForGetItemAtFunction = reinterpret_cast<decltype(mGetArgumentForGetItemAtFunction)>(getPointerFromImmediate(reinterpret_cast<Pointer>(mGetArgumentForGetItemAtFunction) + 0x1));
-	mGetF0C0PtrFunction = reinterpret_cast<decltype(mGetF0C0PtrFunction)>(mF0C0ArgumentBase ? getPointerFromImmediate(mF0C0ArgumentBase + 0x7 + 0x1) : nullptr);
+	mGetF0C0PtrFunction = reinterpret_cast<decltype(mGetF0C0PtrFunction)>(mCriticalSectionObjectBase ? getPointerFromImmediate(mCriticalSectionObjectBase + 0x7 + 0x1) : nullptr);
 	mUnlimitedAmmoStructGetterFunction = reinterpret_cast<decltype(mUnlimitedAmmoStructGetterFunction)>(getPointerFromImmediate(reinterpret_cast<Pointer>(mUnlimitedAmmoStructGetterFunction) + 0x1));
 	//mGetRSIFunction = reinterpret_cast<decltype(mGetRSIFunction)>(getPointerFromImmediate(mGetRSIArgument + 0xE));
 	mGetDamageInfoTableBaseFunction = reinterpret_cast<decltype(mGetDamageInfoTableBaseFunction)>(getPointerFromImmediate(reinterpret_cast<Pointer>(mGetDamageInfoTableBaseFunction) + 0x1));
@@ -116,7 +116,7 @@ Game::Game()
 	mBB0Base = getPointerFromImmediate(mBB0Base + 0x3);
 	mGetNameFirstParameter = getPointerFromImmediate(mGetNameFirstParameter + 0x3);
 	mUnnamedArgumentPointer = getPointerFromImmediate(mUnnamedArgumentPointer + 0x3);
-	mF0C0ArgumentBase = getPointerFromImmediate(mF0C0ArgumentBase + 0x3);
+	mCriticalSectionObjectBase = getPointerFromImmediate(mCriticalSectionObjectBase + 0x3);
 	mWeaponInfoTableBase = getPointerFromImmediate(mWeaponInfoTableBase + 0x3);
 	mTimerBase = getPointerFromImmediate(mTimerBase + 0x3);
 	mSaveCounterBase = getPointerFromImmediate(mSaveCounterBase + 0x3);
@@ -124,7 +124,7 @@ Game::Game()
 	mPlayerBase = getPointerFromImmediate(mPlayerBase + 0x3);
 	mUnlimitedAmmoIndexBase = getPointerFromImmediate(mUnlimitedAmmoIndexBase + 0x3);
 	mUnknownStaticObject = getPointerFromImmediate(mUnknownStaticObject + 0x3);
-	mUnknownStaticObject2 = getPointerFromImmediate(mUnknownStaticObject2 + 0x3);
+	mEnemyListBase = getPointerFromImmediate(mEnemyListBase + 0x3);
 	//mGetRSIArgument = getPointerFromImmediate(mGetRSIArgument + 0x3);
 
 	for (unsigned i = 0; i <= static_cast<unsigned>(Game::ItemId::StuffedDoll); ++i)
@@ -438,7 +438,7 @@ Game::DamageInfo* Game::getDamageInfo(DamageType damageType, int subDamageType)
 	{
 		Pointer secondArg = pointerPath(mUnknownStaticObject, 0x70, 0x0);
 		//Pointer thirdArg = pointerPath(mUnknownStaticObject2, 0x50, 0x50, 0x18, 0x10, 0);
-		Pointer thirdArg = pointerPath(mUnknownStaticObject2, 0x40, 0x10, 0);
+		Pointer thirdArg = pointerPath(mEnemyListBase, 0x40, 0x10, 0);
 
 		if (secondArg && thirdArg)
 		{
@@ -469,5 +469,5 @@ Game::Timer* Game::getTimer()
 
 Pointer Game::getF0c0()
 {
-	return static_cast<Pointer>(mGetF0C0PtrFunction(getValue<Pointer>(mF0C0ArgumentBase), ~0u));
+	return static_cast<Pointer>(mGetF0C0PtrFunction(getValue<Pointer>(mCriticalSectionObjectBase), ~0u));
 }
